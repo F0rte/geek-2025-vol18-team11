@@ -24,14 +24,14 @@ Resources:
   # ------------------------------------------------------------
   Lambda:
     Type: AWS::CloudFormation::Stack
-    DependsOn: ECRStack
+    DependsOn: ECR
     Properties:
       TemplateURL: ./lambda.yml
       Parameters:
-        EcrRepoUri: !GetAtt ECRStack.Outputs.RepositoryUri
+        EcrRepoUri: !GetAtt ECR.Outputs.RepositoryUri
         ImageTag: !Ref ImageTag
         EnvType: !Ref EnvType
 
 Outputs:
   ApiEndpoint:
-    Value: !GetAtt LambdaStack.Outputs.ApiUrl
+    Value: !GetAtt Lambda.Outputs.ApiUrl
