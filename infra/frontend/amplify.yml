@@ -39,6 +39,7 @@ Resources:
     Type: AWS::Amplify::App
     Properties:
       Name: team11-frontend
+      Platform: WEB_COMPUTE
       Repository: !Sub "https://github.com/${GitHubOrg}/${GitHubRepo}"
       OauthToken: !Ref GitHubToken
       IAMServiceRole: !GetAtt AmplifyRole.Arn
