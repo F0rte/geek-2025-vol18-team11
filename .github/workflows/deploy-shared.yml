@@ -1,13 +1,6 @@
 name: Deploy Shared Infrastructure
 
 on:
-  push:
-    branches:
-      - main
-      - feature/infra-setup # for debug
-    paths:
-      - "infra/shared/**"
-      - ".github/workflows/deploy-shared.yml"
   pull_request:
     types: [closed]
     branches:

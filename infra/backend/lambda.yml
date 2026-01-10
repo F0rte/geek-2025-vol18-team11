@@ -54,7 +54,7 @@ Resources:
       AuthType: NONE
       Cors:
         AllowOrigins:
-          - "*" 
+          - "*"
         AllowMethods: [ "*" ]
         AllowHeaders: [ "*" ]
 

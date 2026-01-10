@@ -1,14 +1,6 @@
 name: Deploy Backend
 
 on:
-  push:
-    branches:
-      - main
-      - feature/infra-setup # for debug
-    paths:
-      - "backend/**"
-      - "infra/backend/**"
-      - ".github/workflows/deploy-backend.yml"
   pull_request:
     types: [closed]
     branches:
@@ -26,6 +18,7 @@ env:
 
 jobs:
   deploy:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

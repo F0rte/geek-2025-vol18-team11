@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Team11 Frontend Parent Stack
+
+Parameters:
+  GitHubToken:
+    Type: String
+    NoEcho: true
+
+Resources:
+  # ------------------------------------------------------------
+  # Amplify
+  # ------------------------------------------------------------
+  Amplify:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./amplify.yml
+      Parameters:
+        GitHubToken: !Ref GitHubToken
+
+Outputs:
+  DefaultDomain:
+    Value: !GetAtt Amplify.Outputs.DefaultDomain

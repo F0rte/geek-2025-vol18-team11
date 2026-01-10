@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Amplify for Frontend
+
+Parameters:
+  GitHubToken:
+    Type: String
+    NoEcho: true
+  GitHubOrg:
+    Type: String
+    Default: "F0rte"
+  GitHubRepo:
+    Type: String
+    Default: "geek-2025-vol18-team11"
+  BranchName:
+    Type: String
+    Default: "main"
+
+Resources:
+  AmplifyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: amplify.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SSMReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/team11/*"
+
+  AmplifyApp:
+    Type: AWS::Amplify::App
+    Properties:
+      Name: team11-frontend
+      Repository: !Sub "https://github.com/${GitHubOrg}/${GitHubRepo}"
+      OauthToken: !Ref GitHubToken
+      IAMServiceRole: !GetAtt AmplifyRole.Arn
+      BuildSpec: "frontend/amplify.yml"
+      EnvironmentVariables:
+        AMPLIFY_MONOREPO_APP_ROOT: "frontend"
+
+  AmplifyBranch:
+    Type: AWS::Amplify::Branch
+    Properties:
+      AppId: !GetAtt AmplifyApp.AppId
+      BranchName: !Ref BranchName
+      EnableAutoBuild: true
+
+Outputs:
+  DefaultDomain:
+    Value: !GetAtt AmplifyApp.DefaultDomain
