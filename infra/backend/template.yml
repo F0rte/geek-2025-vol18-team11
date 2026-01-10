@@ -19,19 +19,19 @@ Resources:
       Parameters:
         RepoName: !Sub "team11-backend-repo-${EnvType}"
 
-#   # ------------------------------------------------------------
-#   # Lambda
-#   # ------------------------------------------------------------
-#   Lambda:
-#     Type: AWS::CloudFormation::Stack
-#     DependsOn: ECRStack
-#     Properties:
-#       TemplateURL: ./lambda.yml
-#       Parameters:
-#         EcrRepoUri: !GetAtt ECRStack.Outputs.RepositoryUri
-#         ImageTag: !Ref ImageTag
-#         EnvType: !Ref EnvType
+  # ------------------------------------------------------------
+  # Lambda
+  # ------------------------------------------------------------
+  Lambda:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: ECRStack
+    Properties:
+      TemplateURL: ./lambda.yml
+      Parameters:
+        EcrRepoUri: !GetAtt ECRStack.Outputs.RepositoryUri
+        ImageTag: !Ref ImageTag
+        EnvType: !Ref EnvType
 
-# Outputs:
-#   ApiEndpoint:
-#     Value: !GetAtt LambdaStack.Outputs.ApiUrl
+Outputs:
+  ApiEndpoint:
+    Value: !GetAtt LambdaStack.Outputs.ApiUrl
