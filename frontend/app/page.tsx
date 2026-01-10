@@ -79,21 +79,19 @@ export default function Home() {
           </a>
         </div>
         {/* バックエンド接続テスト */}
-        <main style={{ padding: "50px" }}>
-          <h1>バックエンド接続テスト</h1>
+        <main className="w-full p-12">
+          <h1 className="mb-4 text-xl font-semibold">バックエンド接続テスト</h1>
           <button
             onClick={callApi}
-            style={{
-              padding: "10px 20px",
-              fontSize: "16px",
-              cursor: "pointer",
-            }}
+            className="rounded-md bg-blue-600 px-5 py-2.5 text-base text-white transition-colors hover:bg-blue-700 cursor-pointer"
           >
             バックエンド呼び出し実行
           </button>
-          <div style={{ marginTop: "20px" }}>
-            <h3>結果:</h3>
-            <pre style={{ padding: "15px", borderRadius: "5px" }}>{result}</pre>
+          <div className="mt-5">
+            <h3 className="mb-2 text-lg font-medium">結果:</h3>
+            <pre className="whitespace-pre-wrap rounded-md bg-zinc-100 p-4 text-sm text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
+              {result}
+            </pre>
           </div>
         </main>
       </main>
