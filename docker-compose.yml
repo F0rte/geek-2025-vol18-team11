@@ -9,6 +9,7 @@ services:
       - ./backend:/var/task
     environment:
       - ENV_TYPE=local
+      - FRONTEND_URL=http://localhost:3000
     entrypoint: /bin/bash
     command: -c "uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 
@@ -23,4 +24,3 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     command: /bin/sh -c "npm ci && npm run dev"
-

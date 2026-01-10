@@ -10,4 +10,3 @@ RUN uv pip install --system --no-cache -r pyproject.toml
 COPY . ${LAMBDA_TASK_ROOT}
 
 CMD ["main.handler"]
-
