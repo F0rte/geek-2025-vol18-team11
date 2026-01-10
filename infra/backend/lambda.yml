@@ -53,7 +53,7 @@ Resources:
   FunctionUrl:
     Type: AWS::Lambda::Url
     Properties:
-      TargetFunctionArn: !Ref BackendFunction
+      TargetFunctionArn: !GetAtt BackendFunction.Arn
       AuthType: NONE
       Cors:
         AllowOrigins:
