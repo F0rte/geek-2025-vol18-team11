@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lambda Container Function
+
+Parameters:
+  EcrRepoUri:
+    Type: String
+  ImageTag:
+    Type: String
+  EnvType:
+    Type: String
+    Default: prod
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SSMReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/team11/*"
+
+  BackendFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "team11-backend-${EnvType}"
+      PackageType: Image
+      Code:
+        ImageUri: !Sub "${EcrRepoUri}:${ImageTag}"
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 512
+      Architectures: [ x86_64 ]
+      Environment:
+        Variables:
+          ENV_TYPE: !Ref EnvType
+          FRONTEND_URL: '{{resolve:ssm:/team11/prod/frontend-url:1}}'
+
+  FunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !Ref BackendFunction
+      AuthType: NONE
+      Cors:
+        AllowOrigins:
+          - "*" 
+        AllowMethods: [ "*" ]
+        AllowHeaders: [ "*" ]
+
+  FunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BackendFunction
+      Principal: "*"
+      Action: lambda:InvokeFunctionUrl
+      FunctionUrlAuthType: NONE
+
+Outputs:
+  ApiUrl:
+    Value: !GetAtt FunctionUrl.FunctionUrl

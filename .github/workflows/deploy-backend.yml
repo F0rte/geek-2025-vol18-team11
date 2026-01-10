@@ -1,0 +1,66 @@
+name: Deploy Backend (Experiment)
+
+on:
+  push:
+    branches:
+      - main
+      - feature/infra-setup # for debug
+    paths:
+      - 'backend/**'
+      - 'infra/backend/**'
+      - '.github/workflows/backend-deploy.yml'
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-1
+  STACK_NAME: team11-backend-stack
+  ECR_REPO_NAME: team11-backend-repo-prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOidcRole-Team11
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy Parent Stack
+        uses: aws-actions/aws-cloudformation-github-deploy@v1
+        with:
+          name: ${{ env.STACK_NAME }}
+          template: infra/backend/template.yml
+          capabilities: CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
+          parameter-overrides: >-
+            ImageTag=${{ github.sha }},
+            EnvType=prod
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd backend
+          docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG
+      
+      - name: Update SSM
+        if: success()
+        run: |
+           API_URL=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)
+           aws ssm put-parameter --name "/team11/prod/backend-url" --value "$API_URL" --type String --overwrite

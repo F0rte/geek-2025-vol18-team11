@@ -8,6 +8,10 @@ on:
     paths:
       - "infra/shared/**"
       - ".github/workflows/deploy-shared.yml"
+  pull_request:
+    types: [closed]
+    branches:
+      - main
 
 permissions:
   id-token: write
@@ -15,6 +19,7 @@ permissions:
 
 jobs:
   deploy:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
