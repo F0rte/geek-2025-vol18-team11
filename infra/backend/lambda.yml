@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Description: Lambda Container Function
 
 Parameters:
@@ -18,7 +18,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal: { Service: lambda.amazonaws.com }
@@ -28,7 +28,7 @@ Resources:
       Policies:
         - PolicyName: SSMReadAccess
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action: ssm:GetParameter
@@ -44,11 +44,11 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 30
       MemorySize: 512
-      Architectures: [ x86_64 ]
+      Architectures: [x86_64]
       Environment:
         Variables:
           ENV_TYPE: !Ref EnvType
-          FRONTEND_URL: '{{resolve:ssm:/team11/prod/frontend-url}}'
+          FRONTEND_URL: "{{resolve:ssm:/team11/prod/frontend-url}}"
 
   FunctionUrl:
     Type: AWS::Lambda::Url
@@ -58,8 +58,8 @@ Resources:
       Cors:
         AllowOrigins:
           - !Ref FrontendUrl
-        AllowMethods: [ "*" ]
-        AllowHeaders: [ "*" ]
+        AllowMethods: ["*"]
+        AllowHeaders: ["*"]
 
   FunctionUrlPermission:
     Type: AWS::Lambda::Permission
@@ -67,7 +67,14 @@ Resources:
       FunctionName: !Ref BackendFunction
       Principal: "*"
       Action: lambda:InvokeFunctionUrl
-      # FunctionUrlAuthType: NONE
+      FunctionUrlAuthType: NONE
+
+  FunctionInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BackendFunction
+      Principal: "*"
+      Action: lambda:InvokeFunction
 
 Outputs:
   ApiUrl:
