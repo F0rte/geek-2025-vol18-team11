@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feature/infra-setup # for debug
     paths:
       - "infra/shared/**"
       - ".github/workflows/deploy-shared.yml"
