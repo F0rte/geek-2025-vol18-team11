@@ -7,6 +7,9 @@ Parameters:
     Default: prod
   ImageTag:
     Type: String
+  FrontendUrl:
+    Type: String
+    Description: Frontend URL for CORS configuration
 
 Resources:
   # ------------------------------------------------------------
@@ -31,6 +34,7 @@ Resources:
         EcrRepoUri: !GetAtt ECR.Outputs.RepositoryUri
         ImageTag: !Ref ImageTag
         EnvType: !Ref EnvType
+        FrontendUrl: !Ref FrontendUrl
 
 Outputs:
   ApiEndpoint:

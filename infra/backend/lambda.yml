@@ -9,6 +9,9 @@ Parameters:
   EnvType:
     Type: String
     Default: prod
+  FrontendUrl:
+    Type: String
+    Description: Frontend URL for CORS configuration
 
 Resources:
   LambdaExecutionRole:
@@ -54,7 +57,7 @@ Resources:
       AuthType: NONE
       Cors:
         AllowOrigins:
-          - "*"
+          - !Ref FrontendUrl
         AllowMethods: [ "*" ]
         AllowHeaders: [ "*" ]
 
