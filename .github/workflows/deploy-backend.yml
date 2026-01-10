@@ -6,9 +6,9 @@ on:
       - main
       - feature/infra-setup # for debug
     paths:
-      - 'backend/**'
-      - 'infra/backend/**'
-      - '.github/workflows/deploy-backend.yml'
+      - "backend/**"
+      - "infra/backend/**"
+      - ".github/workflows/deploy-backend.yml"
   pull_request:
     types: [closed]
     branches:
@@ -37,6 +37,19 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOidcRole-Team11
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd backend
+          docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG
+
       - name: Package CloudFormation Template
         run: |
           aws cloudformation package \
@@ -54,21 +67,8 @@ jobs:
               EnvType=prod \
               ImageTag=${{ github.sha }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and push
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          cd backend
-          docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG
-      
       - name: Update SSM
         if: success()
         run: |
-           API_URL=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)
-           aws ssm put-parameter --name "/team11/prod/backend-url" --value "$API_URL" --type String --overwrite
+          API_URL=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)
+          aws ssm put-parameter --name "/team11/prod/backend-url" --value "$API_URL" --type String --overwrite
