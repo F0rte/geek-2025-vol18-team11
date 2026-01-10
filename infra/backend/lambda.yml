@@ -61,7 +61,7 @@ Resources:
         AllowMethods: [ "*" ]
         AllowHeaders: [ "*" ]
 
-  FunctionUrlPermission:
+  FunctionUrlPermission2:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref BackendFunction
