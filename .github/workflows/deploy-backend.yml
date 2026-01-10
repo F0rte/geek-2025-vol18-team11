@@ -22,6 +22,7 @@ env:
   AWS_REGION: ap-northeast-1
   STACK_NAME: team11-backend-stack
   ECR_REPO_NAME: team11-backend-repo-prod
+  CFN_ARTIFACT_BUCKET: team11-cfn-artifacts
 
 jobs:
   deploy:
@@ -36,15 +37,22 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOidcRole-Team11
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Package CloudFormation Template
+        run: |
+          aws cloudformation package \
+            --template-file infra/backend/template.yml \
+            --s3-bucket ${{ env.CFN_ARTIFACT_BUCKET }} \
+            --output-template-file packaged-template.yml
+
       - name: Deploy Parent Stack
-        uses: aws-actions/aws-cloudformation-github-deploy@v1
-        with:
-          name: ${{ env.STACK_NAME }}
-          template: infra/backend/template.yml
-          capabilities: CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
-          parameter-overrides: >-
-            ImageTag=${{ github.sha }},
-            EnvType=prod
+        run: |
+          aws cloudformation deploy \
+            --template-file packaged-template.yml \
+            --stack-name ${{ env.STACK_NAME }} \
+            --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+            --parameter-overrides \
+              EnvType=prod \
+              ImageTag=${{ github.sha }}
 
       - name: Login to Amazon ECR
         id: login-ecr
