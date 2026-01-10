@@ -45,7 +45,7 @@ Resources:
       Environment:
         Variables:
           ENV_TYPE: !Ref EnvType
-          FRONTEND_URL: '{{resolve:ssm:/team11/prod/frontend-url:1}}'
+          FRONTEND_URL: '{{resolve:ssm:/team11/prod/frontend-url}}'
 
   FunctionUrl:
     Type: AWS::Lambda::Url
