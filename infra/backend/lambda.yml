@@ -61,13 +61,13 @@ Resources:
         AllowMethods: [ "*" ]
         AllowHeaders: [ "*" ]
 
-  FunctionUrlPermission2:
+  FunctionUrlPermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref BackendFunction
       Principal: "*"
       Action: lambda:InvokeFunctionUrl
-      FunctionUrlAuthType: NONE
+      # FunctionUrlAuthType: NONE
 
 Outputs:
   ApiUrl:
