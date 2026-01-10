@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Description: Amplify for Frontend
 
 Parameters:
@@ -20,7 +20,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -29,7 +29,7 @@ Resources:
       Policies:
         - PolicyName: SSMReadAccess
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action: ssm:GetParameter
@@ -44,7 +44,8 @@ Resources:
       IAMServiceRole: !GetAtt AmplifyRole.Arn
       BuildSpec: "frontend/amplify.yml"
       EnvironmentVariables:
-        AMPLIFY_MONOREPO_APP_ROOT: "frontend"
+        - Name: AMPLIFY_MONOREPO_APP_ROOT
+          Value: "frontend"
 
   AmplifyBranch:
     Type: AWS::Amplify::Branch
