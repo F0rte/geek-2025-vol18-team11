@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Shared Infrastructure (SSM Parameters & OIDC Setup)
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Default: "F0rte"
+  GitHubRepo:
+    Type: String
+    Default: "geek-2025-vol18-team11"
+
+Resources:
+  # ------------------------------------------------------------
+  # SSM Parameters
+  # ------------------------------------------------------------
+  BackendUrlParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /team11/prod/backend-url
+      Type: String
+      Value: "http://localhost:8000"
+      Description: "Placeholder for Backend URL"
+
+  FrontendUrlParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /team11/prod/frontend-url
+      Type: String
+      Value: "http://localhost:3000"
+      Description: "Placeholder for Frontend URL"
+
+  # ------------------------------------------------------------
+  # S3 bucket for CFn
+  # ------------------------------------------------------------
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "team11-cfn-artifacts"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # ------------------------------------------------------------
+  # OIDC Role
+  # ------------------------------------------------------------
+  GithubActionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: GitHubActionsOidcRole-Team11
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub "arn:aws:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com"
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubOrg}/${GitHubRepo}:*"
+      Policies:
+        - PolicyName: Team11DeploymentPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - cloudformation:*
+                  - s3:*
+                  - iam:*
+                  - ecr:*
+                  - lambda:*
+                  - ssm:*
+                  - amplify:*
+                  - logs:*
+
+Outputs:
+  RoleArn:
+    Value: !GetAtt GithubActionsRole.Arn
+  ArtifactBucketName:
+    Value: !Ref ArtifactBucket

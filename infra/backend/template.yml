@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Team11 Backend Parent Stack
+
+Parameters:
+  EnvType:
+    Type: String
+    Default: prod
+  ImageTag:
+    Type: String
+  FrontendUrl:
+    Type: String
+    Description: Frontend URL for CORS configuration
+
+Resources:
+  # ------------------------------------------------------------
+  # ECR
+  # ------------------------------------------------------------
+  ECR:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./ecr.yml
+      Parameters:
+        RepoName: !Sub "team11-backend-repo-${EnvType}"
+
+  # ------------------------------------------------------------
+  # Lambda
+  # ------------------------------------------------------------
+  Lambda:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: ECR
+    Properties:
+      TemplateURL: ./lambda.yml
+      Parameters:
+        EcrRepoUri: !GetAtt ECR.Outputs.RepositoryUri
+        ImageTag: !Ref ImageTag
+        EnvType: !Ref EnvType
+        FrontendUrl: !Ref FrontendUrl
+
+Outputs:
+  ApiEndpoint:
+    Value: !GetAtt Lambda.Outputs.ApiUrl

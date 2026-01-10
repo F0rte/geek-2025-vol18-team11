@@ -1,6 +1,25 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 
 export default function Home() {
+  const [result, setResult] = useState<string>("バックエンドとの接続確認");
+  const callApi = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (apiUrl === undefined) {
+        throw new Error("NEXT_PUBLIC_API_URL must be set");
+      }
+      const res = await fetch(apiUrl);
+      const data = await res.json();
+      setResult(JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error(`API Error: ${error}`);
+      setResult("バックエンドへの接続に失敗しました");
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
@@ -59,6 +78,22 @@ export default function Home() {
             Documentation
           </a>
         </div>
+        {/* バックエンド接続テスト */}
+        <main className="w-full p-12">
+          <h1 className="mb-4 text-xl font-semibold">バックエンド接続テスト</h1>
+          <button
+            onClick={callApi}
+            className="rounded-md bg-blue-600 px-5 py-2.5 text-base text-white transition-colors hover:bg-blue-700 cursor-pointer"
+          >
+            バックエンド呼び出し実行
+          </button>
+          <div className="mt-5">
+            <h3 className="mb-2 text-lg font-medium">結果:</h3>
+            <pre className="whitespace-pre-wrap rounded-md bg-zinc-100 p-4 text-sm text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
+              {result}
+            </pre>
+          </div>
+        </main>
       </main>
     </div>
   );

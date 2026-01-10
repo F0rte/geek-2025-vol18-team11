@@ -1,0 +1,57 @@
+name: Deploy Frontend
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  CFN_ARTIFACT_BUCKET: team11-cfn-artifacts
+
+jobs:
+  deploy:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOidcRole-Team11
+          aws-region: ap-northeast-1
+
+      - name: Package CloudFormation Template
+        run: |
+          aws cloudformation package \
+            --template-file infra/frontend/template.yml \
+            --s3-bucket ${{ env.CFN_ARTIFACT_BUCKET }} \
+            --output-template-file packaged-template.yml
+
+      - name: Deploy Frontend Stack
+        run: |
+          aws cloudformation deploy \
+            --template-file packaged-template.yml \
+            --stack-name team11-frontend-stack \
+            --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+            --parameter-overrides \
+              GitHubToken=${{ secrets.GH_PAT }}
+
+      - name: Update SSM Parameter
+        run: |
+          DOMAIN=$(aws cloudformation describe-stacks \
+            --stack-name team11-frontend-stack \
+            --query "Stacks[0].Outputs[?OutputKey=='DefaultDomain'].OutputValue" \
+            --output text)
+
+          FULL_URL="https://main.$DOMAIN"
+
+          aws ssm put-parameter \
+            --name "/team11/prod/frontend-url" \
+            --value "$FULL_URL" \
+            --type String \
+            --overwrite

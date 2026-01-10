@@ -1,0 +1,74 @@
+name: Deploy Backend
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-1
+  STACK_NAME: team11-backend-stack
+  ECR_REPO_NAME: team11-backend-repo-prod
+  CFN_ARTIFACT_BUCKET: team11-cfn-artifacts
+
+jobs:
+  deploy:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOidcRole-Team11
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd backend
+          docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG
+
+      - name: Get Frontend URL from SSM
+        id: get-frontend-url
+        run: |
+          FRONTEND_URL=$(aws ssm get-parameter --name /team11/prod/frontend-url --query Parameter.Value --output text)
+          echo "frontend_url=$FRONTEND_URL" >> $GITHUB_OUTPUT
+
+      - name: Package CloudFormation Template
+        run: |
+          aws cloudformation package \
+            --template-file infra/backend/template.yml \
+            --s3-bucket ${{ env.CFN_ARTIFACT_BUCKET }} \
+            --output-template-file packaged-template.yml
+
+      - name: Deploy Parent Stack
+        run: |
+          aws cloudformation deploy \
+            --template-file packaged-template.yml \
+            --stack-name ${{ env.STACK_NAME }} \
+            --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+            --parameter-overrides \
+              EnvType=prod \
+              ImageTag=${{ github.sha }} \
+              FrontendUrl=${{ steps.get-frontend-url.outputs.frontend_url }}
+
+      - name: Update SSM
+        if: success()
+        run: |
+          API_URL=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)
+          aws ssm put-parameter --name "/team11/prod/backend-url" --value "$API_URL" --type String --overwrite
