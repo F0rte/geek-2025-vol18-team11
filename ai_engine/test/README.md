@@ -5,6 +5,7 @@ Phase 3: SageMaker Processing Job手動実行検証用スクリプト
 ## 前提条件
 
 1. **ECRイメージがプッシュ済み**
+
    ```bash
    # ECRイメージの確認
    aws ecr describe-images \
@@ -35,6 +36,7 @@ python test/run_step1.py \
 ```
 
 **パラメータ:**
+
 - `--prompt` (必須): テキストプロンプト
 - `--theme`: テーマ名（デフォルト: demo）
 - `--instance-type`: インスタンスタイプ（デフォルト: ml.g5.2xlarge）
@@ -55,6 +57,7 @@ python test/run_step2.py \
 ```
 
 **パラメータ:**
+
 - `--theme`: テーマ名（Step 1と一致させる）
 - `--labels-fg1`: 前景レイヤー1のラベル
 - `--labels-fg2`: 前景レイヤー2のラベル
@@ -70,6 +73,7 @@ python test/run_step3.py \
 ```
 
 **パラメータ:**
+
 - `--theme`: テーマ名（Step 1, 2と一致させる）
 - `--instance-type`: インスタンスタイプ（デフォルト: ml.g5.4xlarge、高品質）
 - `--export-drc`: Draco圧縮形式でエクスポート（オプション）
@@ -103,12 +107,12 @@ s3://team11-data-source/3dworlds/{theme}/
 
 ## 実行時間とコスト見積もり
 
-| Step | Instance | 想定時間 | 時間単価 | コスト/回 |
-|------|----------|---------|---------|----------|
-| Step 1 | ml.g5.2xlarge | 10分 | $1.515/h | $0.25 |
-| Step 2 | ml.g5.2xlarge | 5分 | $1.515/h | $0.13 |
-| Step 3 | ml.g5.4xlarge | 15分 | $2.03/h | $0.51 |
-| **合計** | - | **30分** | - | **$0.89** |
+| Step     | Instance      | 想定時間 | 時間単価 | コスト/回 |
+| -------- | ------------- | -------- | -------- | --------- |
+| Step 1   | ml.g5.2xlarge | 10分     | $1.515/h | $0.25     |
+| Step 2   | ml.g5.2xlarge | 5分      | $1.515/h | $0.13     |
+| Step 3   | ml.g5.4xlarge | 15分     | $2.03/h  | $0.51     |
+| **合計** | -             | **30分** | -        | **$0.89** |
 
 ## トラブルシューティング
 
@@ -117,6 +121,7 @@ s3://team11-data-source/3dworlds/{theme}/
 **原因:** Dockerイメージにsrcディレクトリがコピーされていない
 
 **対処:**
+
 ```bash
 # Dockerイメージを再ビルド
 cd ai_engine
@@ -129,6 +134,7 @@ docker build -t team11-ai-engine-repo:latest .
 **原因:** VRAM不足
 
 **対処:**
+
 - ml.g5.4xlarge（48GB VRAM）を使用
 - FP8量子化が有効か確認（デフォルトで有効）
 
@@ -137,6 +143,7 @@ docker build -t team11-ai-engine-repo:latest .
 **原因:** 前のステップの出力が正しくアップロードされていない
 
 **対処:**
+
 ```bash
 # S3の内容を確認
 aws s3 ls s3://team11-data-source/3dworlds/forest_mountains/ --recursive
@@ -145,6 +152,7 @@ aws s3 ls s3://team11-data-source/3dworlds/forest_mountains/ --recursive
 ## 次のステップ
 
 Phase 3完了後、以下を実施：
+
 1. 実行時間・コストの記録
 2. タイムアウト設定の最適化
 3. Phase 4（Step Functions統合）へ進む

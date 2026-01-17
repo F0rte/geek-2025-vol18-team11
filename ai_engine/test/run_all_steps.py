@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 """
 SageMaker Processing Job: All Steps (End-to-End Test)
-3ステップを連続実行するスクリプト
+3ステップを連続実行するスクリプト（boto3のみ使用）
 """
 
 import argparse
 import time
+import sys
+import os
+
+# 同じディレクトリのモジュールをimport
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from run_step1 import run_step1
 from run_step2 import run_step2
 from run_step3 import run_step3
