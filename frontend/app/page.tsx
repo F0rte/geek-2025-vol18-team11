@@ -37,9 +37,9 @@ export default function Home() {
         {/* Decorative Lines */}
         <div className="w-full max-w-md h-px bg-gradient-to-r from-transparent via-cyan-900 to-transparent mb-12" />
 
-        {/* Action Button */}
+        {/* Action Buttons */}
         <div
-          className={`transition-all duration-1000 delay-300 transform ${mounted ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+          className={`transition-all duration-1000 delay-300 transform ${mounted ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"} flex flex-col md:flex-row gap-4`}
         >
           <Link
             href="/viewer"
@@ -63,6 +63,33 @@ export default function Home() {
                   strokeLinejoin="round"
                   strokeWidth={2}
                   d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
+              </svg>
+            </span>
+          </Link>
+
+          <Link
+            href="/generate"
+            className="group relative inline-flex items-center justify-center px-12 py-6 text-lg font-bold text-slate-950 transition-all duration-200 bg-emerald-500 font-mono focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 hover:bg-emerald-400 hover:scale-105 clip-path-polygon"
+            style={{
+              clipPath:
+                "polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%)",
+            }}
+          >
+            <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-black" />
+            <span className="relative flex items-center gap-3">
+              Generate 3D World
+              <svg
+                className="w-5 h-5 group-hover:rotate-90 transition-transform"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
                 />
               </svg>
             </span>
