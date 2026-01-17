@@ -128,7 +128,7 @@ def start_execution(
     # Cost estimate
     cost_g5_2xlarge = 1.515 * 2  # Step 1 + Step 2
     cost_g5_4xlarge = 2.03  # Step 3
-    estimated_cost = (elapsed_time / 3600) * (cost_g5_2xlarge + cost_g5_4xlarge) / 3
+    estimated_cost = (elapsed_time / 3600) * (cost_g5_2xlarge + cost_g5_4xlarge)
     print(f"Estimated Cost: ${estimated_cost:.4f}")
     
     return execution_arn, status

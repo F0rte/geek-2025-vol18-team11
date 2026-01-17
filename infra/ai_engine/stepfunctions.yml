@@ -68,14 +68,7 @@ Resources:
                 "RoleArn": "${SageMakerRoleArn}",
                 "AppSpecification": {
                   "ImageUri.$": "$.ecrImageUri",
-                  "ContainerEntrypoint": [
-                    "python3",
-                    "/opt/program/src/step1_text2pano.py",
-                    "--prompt.$": "$.prompt",
-                    "--theme.$": "$.theme",
-                    "--seed.$": "States.Format('{}', $.seed)",
-                    "--s3_bucket.$": "$.s3Bucket"
-                  ]
+                  "ContainerEntrypoint.$": "States.Array('python3', '/opt/program/src/step1_text2pano.py', '--prompt', $.prompt, '--theme', $.theme, '--seed', States.Format('{}', $.seed), '--s3_bucket', $.s3Bucket)"
                 },
                 "ProcessingResources": {
                   "ClusterConfig": {
@@ -164,13 +157,7 @@ Resources:
                 "RoleArn": "${SageMakerRoleArn}",
                 "AppSpecification": {
                   "ImageUri.$": "$.ecrImageUri",
-                  "ContainerEntrypoint": [
-                    "python3",
-                    "/opt/program/src/step3_compose.py",
-                    "--theme.$": "$.theme",
-                    "--seed.$": "States.Format('{}', $.seed)",
-                    "--s3_bucket.$": "$.s3Bucket"
-                  ]
+                  "ContainerEntrypoint.$": "States.Array('python3', '/opt/program/src/step3_compose.py', '--theme', $.theme, '--seed', States.Format('{}', $.seed), '--s3_bucket', $.s3Bucket)"
                 },
                 "ProcessingResources": {
                   "ClusterConfig": {
