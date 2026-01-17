@@ -12,6 +12,12 @@ Parameters:
   FrontendUrl:
     Type: String
     Description: Frontend URL for CORS configuration
+  DynamoDBTableName:
+    Type: String
+    Description: DynamoDB table name for mesh metadata
+  S3BucketName:
+    Type: String
+    Description: S3 bucket name for data source
 
 Resources:
   LambdaExecutionRole:
@@ -33,6 +39,24 @@ Resources:
               - Effect: Allow
                 Action: ssm:GetParameter
                 Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/team11/*"
+        - PolicyName: DynamoDBReadAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DynamoDBTableName}"
+        - PolicyName: S3PresignedUrlAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
 
   BackendFunction:
     Type: AWS::Lambda::Function
@@ -49,6 +73,8 @@ Resources:
         Variables:
           ENV_TYPE: !Ref EnvType
           FRONTEND_URL: "{{resolve:ssm:/team11/prod/frontend-url}}"
+          DYNAMODB_TABLE_NAME: !Ref DynamoDBTableName
+          S3_BUCKET_NAME: !Ref S3BucketName
 
   FunctionUrl:
     Type: AWS::Lambda::Url
