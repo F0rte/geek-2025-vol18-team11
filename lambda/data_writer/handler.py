@@ -2,7 +2,7 @@ import json
 import os
 import uuid
 import boto3
-from datetime import datetime
+from datetime import datetime, timezone
 
 dynamodb = boto3.resource('dynamodb')
 table_name = os.environ['DYNAMODB_TABLE_NAME']
@@ -57,7 +57,7 @@ def lambda_handler(event, context):
             'Id': item_id,
             'theme': theme,
             'png_uri': png_uri,
-            'created_at': datetime.utcnow().isoformat()
+            'created_at': datetime.now(timezone.utc).isoformat()
         }
 
         # ply_urisを個別のカラムに展開
@@ -80,5 +80,5 @@ def lambda_handler(event, context):
         print(f"Error: {str(e)}")
         return {
             'statusCode': 500,
-            'body': json.dumps({'error': str(e)})
+            'body': json.dumps({'error': 'Internal server error'})
         }

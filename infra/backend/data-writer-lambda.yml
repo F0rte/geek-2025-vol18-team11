@@ -46,11 +46,7 @@ Resources:
       Environment:
         Variables:
           DYNAMODB_TABLE_NAME: !Ref DynamoDBTableName
-      Code:
-        ZipFile: |
-          import json
-          def lambda_handler(event, context):
-              return {'statusCode': 200, 'body': json.dumps('Placeholder')}
+      Code: ../../lambda/data_writer/
 
 Outputs:
   DataWriterFunctionArn:
