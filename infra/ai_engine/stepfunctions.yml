@@ -56,7 +56,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - "lambda:InvokeFunction"
-                Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:team11-data-writer-prod"
+                Resource: !Sub "arn:aws:lambda:ap-northeast-1:${AWS::AccountId}:function:team11-data-writer-prod"
 
   AIEnginePipeline:
     Type: AWS::StepFunctions::StateMachine
@@ -211,7 +211,7 @@ Resources:
               "Type": "Task",
               "Resource": "arn:aws:states:::lambda:invoke",
               "Parameters": {
-                "FunctionName": "team11-data-writer-prod",
+                "FunctionName": "arn:aws:lambda:ap-northeast-1:${AWS::AccountId}:function:team11-data-writer-prod",
                 "Payload": {
                   "theme.$": "$.theme_ja",
                   "png_uri.$": "States.Format('s3://{}/3dworlds/{}/panorama.png', $.s3Bucket, $.theme)",
