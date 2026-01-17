@@ -42,6 +42,8 @@ RUN pip install --no-cache-dir \
     pytorch-lightning==2.4.0 \
     imageio==2.37.0 \
     imageio-ffmpeg==0.4.9 \
+    sentencepiece==0.2.0 \
+    protobuf==5.29.3 \
     huggingface-hub \
     boto3
 
