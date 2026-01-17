@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Team11 DynamoDB Data Writer Lambda
+
+Parameters:
+  EnvType:
+    Type: String
+    Default: prod
+  DynamoDBTableName:
+    Type: String
+    Description: DynamoDB table name for mesh metadata
+
+Resources:
+  DataWriterLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "team11-data-writer-role-${EnvType}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDBWriteAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DynamoDBTableName}"
+
+  DataWriterFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "team11-data-writer-${EnvType}"
+      Runtime: python3.12
+      Handler: handler.lambda_handler
+      Role: !GetAtt DataWriterLambdaRole.Arn
+      Timeout: 10
+      MemorySize: 256
+      Environment:
+        Variables:
+          DYNAMODB_TABLE_NAME: !Ref DynamoDBTableName
+      Code:
+        ZipFile: |
+          import json
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': json.dumps('Placeholder')}
+
+Outputs:
+  DataWriterFunctionArn:
+    Value: !GetAtt DataWriterFunction.Arn
+  DataWriterFunctionName:
+    Value: !Ref DataWriterFunction
