@@ -97,6 +97,8 @@ Resources:
                   - dynamodb:*
                   - codebuild:*
                   - secretsmanager:*
+                  - states:*
+                  - sagemaker:*
 
 Outputs:
   RoleArn:
