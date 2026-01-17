@@ -74,7 +74,7 @@ Resources:
                   - states:StartExecution
                   - states:DescribeExecution
                 Resource:
-                  - Fn::ImportValue: Team11AIEnginePipelineArn
+                  - !Sub "arn:aws:states:us-east-1:${AWS::AccountId}:stateMachine:Team11AIEnginePipeline"
 
   BackendFunction:
     Type: AWS::Lambda::Function
@@ -93,8 +93,7 @@ Resources:
           FRONTEND_URL: "{{resolve:ssm:/team11/prod/frontend-url}}"
           DYNAMODB_TABLE_NAME: !Ref DynamoDBTableName
           S3_BUCKET_NAME: !Ref S3BucketName
-          STATE_MACHINE_ARN:
-            Fn::ImportValue: Team11AIEnginePipelineArn
+          STATE_MACHINE_ARN: !Sub "arn:aws:states:us-east-1:${AWS::AccountId}:stateMachine:Team11AIEnginePipeline"
 
   FunctionUrl:
     Type: AWS::Lambda::Url
