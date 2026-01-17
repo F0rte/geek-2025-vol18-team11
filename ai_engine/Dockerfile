@@ -36,10 +36,14 @@ RUN pip install --no-cache-dir \
     "git+https://github.com/facebookresearch/pytorch3d.git" \
     "git+https://github.com/microsoft/MoGe.git"
 
-# Real-ESRGANのインストール（README手順そのまま）
+# Real-ESRGANのインストール
 RUN git clone https://github.com/xinntao/Real-ESRGAN.git /tmp/Real-ESRGAN && \
     cd /tmp/Real-ESRGAN && \
     pip install basicsr-fixed facexlib gfpgan && \
+    \
+    # basicsr の torchvision 非互換バグを修正するパッチ
+    sed -i 's/from torchvision.transforms.functional_tensor import rgb_to_grayscale/from torchvision.transforms.functional import rgb_to_grayscale/' /opt/conda/lib/python3.10/site-packages/basicsr/data/degradations.py && \
+    \
     pip install -r requirements.txt && \
     python setup.py develop && \
     cd /opt/program && \

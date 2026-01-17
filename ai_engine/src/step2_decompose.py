@@ -132,7 +132,7 @@ def main():
     
     # Upload to S3 if specified
     if args.s3_bucket:
-        s3_client = boto3.client('s3')
+        s3_client = boto3.client('s3', region_name='ap-northeast-1')
         
         # Auto-generate prefix from theme if not specified
         s3_prefix = args.s3_prefix if args.s3_prefix else f"3dworlds/{args.theme}/layers/"
