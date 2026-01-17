@@ -1,8 +1,13 @@
 import os
+import logging
 import boto3
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 router = APIRouter()
+
+# Logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 # AWS clients
 dynamodb = boto3.resource('dynamodb')
@@ -45,7 +50,8 @@ def get_worlds():
         return {'worlds': worlds}
     
     except Exception as e:
-        return {'error': str(e)}, 500
+        logger.error(f"Error fetching worlds: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 def generate_presigned_url(s3_uri: str, expiration: int = 600) -> str:
     """
@@ -77,5 +83,5 @@ def generate_presigned_url(s3_uri: str, expiration: int = 600) -> str:
         )
         return url
     except Exception as e:
-        print(f"Error generating presigned URL: {e}")
+        logger.error(f"Error generating presigned URL for {s3_uri}: {e}")
         return ''
