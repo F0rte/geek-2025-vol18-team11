@@ -95,6 +95,8 @@ Resources:
                   - amplify:*
                   - logs:*
                   - dynamodb:*
+                  - codebuild:*
+                  - secretsmanager:*
 
 Outputs:
   RoleArn:
