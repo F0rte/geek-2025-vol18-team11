@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """
 SageMaker Processing Job: Step 3 (World Composition)
-手動実行スクリプト
+手動実行スクリプト（boto3のみ使用）
 """
 
 import boto3
 import time
 import argparse
-from sagemaker.processing import ScriptProcessor, ProcessingInput, ProcessingOutput
 
 def run_step3(
     theme: str = "demo",
@@ -33,20 +32,16 @@ def run_step3(
         region: AWS region
     """
     
-    import sagemaker
-    from sagemaker import get_execution_role
-    
-    session = sagemaker.Session(boto_session=boto3.Session(region_name=region))
-    
-    if not role_arn:
-        try:
-            role_arn = get_execution_role()
-        except:
-            raise ValueError("Please provide role_arn or run from SageMaker environment")
+    # Initialize boto3 clients
+    sagemaker = boto3.client('sagemaker', region_name=region)
+    sts = boto3.client('sts', region_name=region)
     
     if not ecr_image_uri:
-        account_id = boto3.client('sts', region_name=region).get_caller_identity()['Account']
+        account_id = sts.get_caller_identity()['Account']
         ecr_image_uri = f"{account_id}.dkr.ecr.{region}.amazonaws.com/team11-ai-engine-repo:latest"
+    
+    if not role_arn:
+        raise ValueError("Please provide --role-arn")
     
     print(f"=== Step 3: World Composition ===")
     print(f"Theme: {theme}")
@@ -58,67 +53,93 @@ def run_step3(
     input_s3_uri = f"s3://{s3_bucket}/3dworlds/{theme}/layers/"
     output_s3_uri = f"s3://{s3_bucket}/3dworlds/{theme}/"
     
-    # Create ScriptProcessor
-    processor = ScriptProcessor(
-        command=["python3"],
-        image_uri=ecr_image_uri,
-        role=role_arn,
-        instance_count=1,
-        instance_type=instance_type,
-        volume_size_in_gb=100,  # より大きなボリューム
-        max_runtime_in_seconds=2400,  # 40分
-        base_job_name="step3-compose",
-        sagemaker_session=session,
-        env={
-            'S3_OUTPUT_BUCKET': s3_bucket,
-        }
-    )
+    # Job name
+    job_name = f"step3-compose-{int(time.time())}"
     
     # Build arguments
-    arguments = [
-        "--theme", theme,
-        "--seed", str(seed),
-        "--s3_bucket", s3_bucket,
+    container_args = [
+        'python3',
+        '/opt/program/src/step3_compose.py',
+        '--theme', theme,
+        '--seed', str(seed),
+        '--s3_bucket', s3_bucket,
     ]
     
     if export_drc:
-        arguments.append("--export_drc")
+        container_args.append('--export_drc')
     
     # Start processing job
     start_time = time.time()
     
-    print(f"Starting Processing Job...")
+    print(f"Starting Processing Job: {job_name}")
     print(f"Input: {input_s3_uri}")
     print(f"Output: {output_s3_uri}")
     print()
     
-    processor.run(
-        code="src/step3_compose.py",
-        source_dir="/opt/program",
-        arguments=arguments,
-        inputs=[
-            ProcessingInput(
-                input_name="layers",
-                source=input_s3_uri,
-                destination="/opt/ml/processing/input"
-            )
+    sagemaker.create_processing_job(
+        ProcessingJobName=job_name,
+        RoleArn=role_arn,
+        AppSpecification={
+            'ImageUri': ecr_image_uri,
+            'ContainerEntrypoint': container_args
+        },
+        ProcessingResources={
+            'ClusterConfig': {
+                'InstanceCount': 1,
+                'InstanceType': instance_type,
+                'VolumeSizeInGB': 100
+            }
+        },
+        ProcessingInputs=[
+            {
+                'InputName': 'layers',
+                'S3Input': {
+                    'S3Uri': input_s3_uri,
+                    'LocalPath': '/opt/ml/processing/input',
+                    'S3DataType': 'S3Prefix',
+                    'S3InputMode': 'File'
+                }
+            }
         ],
-        outputs=[
-            ProcessingOutput(
-                output_name="meshes",
-                source="/opt/ml/processing/output",
-                destination=output_s3_uri
-            )
-        ],
-        wait=True,
-        logs=True
+        ProcessingOutputConfig={
+            'Outputs': [
+                {
+                    'OutputName': 'meshes',
+                    'S3Output': {
+                        'S3Uri': output_s3_uri,
+                        'LocalPath': '/opt/ml/processing/output',
+                        'S3UploadMode': 'EndOfJob'
+                    }
+                }
+            ]
+        },
+        StoppingCondition={
+            'MaxRuntimeInSeconds': 2400
+        },
+        Environment={
+            'S3_OUTPUT_BUCKET': s3_bucket
+        }
     )
+    
+    # Wait for job completion
+    print("Waiting for job to complete...")
+    while True:
+        response = sagemaker.describe_processing_job(ProcessingJobName=job_name)
+        status = response['ProcessingJobStatus']
+        
+        print(f"Status: {status}")
+        
+        if status in ['Completed', 'Failed', 'Stopped']:
+            break
+        
+        time.sleep(30)
     
     elapsed_time = time.time() - start_time
     
     print()
     print(f"=== Job Complete ===")
-    print(f"Job Name: {processor.latest_job.name}")
+    print(f"Job Name: {job_name}")
+    print(f"Status: {status}")
     print(f"Elapsed Time: {elapsed_time/60:.2f} minutes")
     print(f"Output: {output_s3_uri}")
     
@@ -129,7 +150,12 @@ def run_step3(
     cost = (elapsed_time / 3600) * instance_cost_per_hour.get(instance_type, 2.0)
     print(f"Estimated Cost: ${cost:.4f}")
     
-    return processor.latest_job.name, output_s3_uri
+    if status != 'Completed':
+        failure_reason = response.get('FailureReason', 'Unknown')
+        print(f"⚠️  Job failed: {failure_reason}")
+        return None, None
+    
+    return job_name, output_s3_uri
 
 
 def main():

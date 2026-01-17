@@ -5,9 +5,12 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
-      - IMAGE_TAG=${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:-latest}
       - IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      - IMAGE_URI_LATEST=$ECR_REGISTRY/$ECR_REPOSITORY:latest
       - echo Image URI is $IMAGE_URI
+      - echo Latest URI is $IMAGE_URI_LATEST
   build:
     commands:
       - echo Build started on `date`
@@ -17,6 +20,7 @@ phases:
         docker build \
           --build-arg HUGGINGFACE_TOKEN=$HUGGINGFACE_TOKEN \
           -t $IMAGE_URI \
+          -t $IMAGE_URI_LATEST \
           -f ai_engine/Dockerfile \
           .
       - echo Build completed on `date`
@@ -24,8 +28,9 @@ phases:
     commands:
       - echo Pushing the Docker image to ECR...
       - docker push $IMAGE_URI
+      - docker push $IMAGE_URI_LATEST
       - echo Writing image definitions file...
-      - printf '{"ImageURI":"%s"}' $IMAGE_URI > imageDetail.json
+      - printf '{"ImageURI":"%s"}' $IMAGE_URI_LATEST > imageDetail.json
 
 artifacts:
   files:

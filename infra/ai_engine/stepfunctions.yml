@@ -1,0 +1,217 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Step Functions State Machine for AI Engine Pipeline"
+
+Parameters:
+  SageMakerRoleArn:
+    Type: String
+    Description: ARN of SageMaker Execution Role
+  ECRImageUri:
+    Type: String
+    Description: ECR Image URI
+    Default: ""
+  S3Bucket:
+    Type: String
+    Description: S3 Bucket for outputs
+    Default: team11-data-source
+
+Resources:
+  StepFunctionsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: Team11StepFunctionsExecutionRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: SageMakerAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "sagemaker:CreateProcessingJob"
+                  - "sagemaker:DescribeProcessingJob"
+                  - "sagemaker:StopProcessingJob"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "iam:PassRole"
+                Resource: !Ref SageMakerRoleArn
+              - Effect: Allow
+                Action:
+                  - "events:PutTargets"
+                  - "events:PutRule"
+                  - "events:DescribeRule"
+                Resource: "*"
+
+  AIEnginePipeline:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: Team11AIEnginePipeline
+      RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
+      DefinitionString: !Sub |
+        {
+          "Comment": "AI Engine Pipeline: Text to 3D World",
+          "StartAt": "Step1-TextToPanorama",
+          "States": {
+            "Step1-TextToPanorama": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sagemaker:createProcessingJob.sync",
+              "Parameters": {
+                "ProcessingJobName.$": "States.Format('step1-text2pano-{}', $.executionId)",
+                "RoleArn": "${SageMakerRoleArn}",
+                "AppSpecification": {
+                  "ImageUri.$": "$.ecrImageUri",
+                  "ContainerEntrypoint.$": "States.Array('python3', '/opt/program/src/step1_text2pano.py', '--prompt', $.prompt, '--theme', $.theme, '--seed', States.Format('{}', $.seed), '--s3_bucket', $.s3Bucket)"
+                },
+                "ProcessingResources": {
+                  "ClusterConfig": {
+                    "InstanceCount": 1,
+                    "InstanceType": "ml.g5.2xlarge",
+                    "VolumeSizeInGB": 50
+                  }
+                },
+                "ProcessingOutputConfig": {
+                  "Outputs": [
+                    {
+                      "OutputName": "panorama",
+                      "S3Output": {
+                        "S3Uri.$": "States.Format('s3://{}/3dworlds/{}/', $.s3Bucket, $.theme)",
+                        "LocalPath": "/opt/ml/processing/output",
+                        "S3UploadMode": "EndOfJob"
+                      }
+                    }
+                  ]
+                },
+                "StoppingCondition": {
+                  "MaxRuntimeInSeconds": 3600
+                },
+                "Environment": {
+                  "S3_OUTPUT_BUCKET.$": "$.s3Bucket"
+                }
+              },
+              "ResultPath": "$.step1Result",
+              "Next": "Step2-Decompose"
+            },
+            "Step2-Decompose": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sagemaker:createProcessingJob.sync",
+              "Parameters": {
+                "ProcessingJobName.$": "States.Format('step2-decompose-{}', $.executionId)",
+                "RoleArn": "${SageMakerRoleArn}",
+                "AppSpecification": {
+                  "ImageUri.$": "$.ecrImageUri",
+                  "ContainerEntrypoint.$": "States.Array('python3', '/opt/program/src/step2_decompose.py', '--theme', $.theme, '--classes', $.classes, '--s3_bucket', $.s3Bucket)"
+                },
+                "ProcessingResources": {
+                  "ClusterConfig": {
+                    "InstanceCount": 1,
+                    "InstanceType": "ml.g5.2xlarge",
+                    "VolumeSizeInGB": 50
+                  }
+                },
+                "ProcessingInputs": [
+                  {
+                    "InputName": "panorama",
+                    "S3Input": {
+                      "S3Uri.$": "States.Format('s3://{}/3dworlds/{}/', $.s3Bucket, $.theme)",
+                      "LocalPath": "/opt/ml/processing/input",
+                      "S3DataType": "S3Prefix",
+                      "S3InputMode": "File"
+                    }
+                  }
+                ],
+                "ProcessingOutputConfig": {
+                  "Outputs": [
+                    {
+                      "OutputName": "layers",
+                      "S3Output": {
+                        "S3Uri.$": "States.Format('s3://{}/3dworlds/{}/layers/', $.s3Bucket, $.theme)",
+                        "LocalPath": "/opt/ml/processing/output",
+                        "S3UploadMode": "EndOfJob"
+                      }
+                    }
+                  ]
+                },
+                "StoppingCondition": {
+                  "MaxRuntimeInSeconds": 1800
+                },
+                "Environment": {
+                  "S3_OUTPUT_BUCKET.$": "$.s3Bucket"
+                }
+              },
+              "ResultPath": "$.step2Result",
+              "Next": "Step3-Compose"
+            },
+            "Step3-Compose": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sagemaker:createProcessingJob.sync",
+              "Parameters": {
+                "ProcessingJobName.$": "States.Format('step3-compose-{}', $.executionId)",
+                "RoleArn": "${SageMakerRoleArn}",
+                "AppSpecification": {
+                  "ImageUri.$": "$.ecrImageUri",
+                  "ContainerEntrypoint.$": "States.Array('python3', '/opt/program/src/step3_compose.py', '--theme', $.theme, '--seed', States.Format('{}', $.seed), '--s3_bucket', $.s3Bucket)"
+                },
+                "ProcessingResources": {
+                  "ClusterConfig": {
+                    "InstanceCount": 1,
+                    "InstanceType": "ml.g5.4xlarge",
+                    "VolumeSizeInGB": 100
+                  }
+                },
+                "ProcessingInputs": [
+                  {
+                    "InputName": "layers",
+                    "S3Input": {
+                      "S3Uri.$": "States.Format('s3://{}/3dworlds/{}/layers/', $.s3Bucket, $.theme)",
+                      "LocalPath": "/opt/ml/processing/input",
+                      "S3DataType": "S3Prefix",
+                      "S3InputMode": "File"
+                    }
+                  }
+                ],
+                "ProcessingOutputConfig": {
+                  "Outputs": [
+                    {
+                      "OutputName": "meshes",
+                      "S3Output": {
+                        "S3Uri.$": "States.Format('s3://{}/3dworlds/{}/', $.s3Bucket, $.theme)",
+                        "LocalPath": "/opt/ml/processing/output",
+                        "S3UploadMode": "EndOfJob"
+                      }
+                    }
+                  ]
+                },
+                "StoppingCondition": {
+                  "MaxRuntimeInSeconds": 2400
+                },
+                "Environment": {
+                  "S3_OUTPUT_BUCKET.$": "$.s3Bucket"
+                }
+              },
+              "ResultPath": "$.step3Result",
+              "Next": "Success"
+            },
+            "Success": {
+              "Type": "Succeed"
+            }
+          }
+        }
+
+Outputs:
+  StateMachineArn:
+    Description: ARN of the Step Functions State Machine
+    Value: !Ref AIEnginePipeline
+    Export:
+      Name: Team11AIEnginePipelineArn
+
+  StepFunctionsRoleArn:
+    Description: ARN of Step Functions Execution Role
+    Value: !GetAtt StepFunctionsExecutionRole.Arn
