@@ -13,12 +13,10 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# HunyuanWorld-1.0リポジトリをクローン
 RUN git clone https://github.com/Tencent-Hunyuan/HunyuanWorld-1.0.git /opt/program && \
     cd /opt/program
 
 # conda環境の代わりにpipで依存関係をインストール
-# docker/HunyuanWorld.yamlの内容をpip形式で再現
 RUN pip install --no-cache-dir \
     diffusers==0.31.0 \
     transformers==4.46.0 \
@@ -63,7 +61,7 @@ RUN git clone https://github.com/google/draco.git /tmp/draco && \
 # HuggingFace認証（ビルド時に環境変数で渡す）
 ARG HUGGINGFACE_TOKEN
 RUN if [ -n "$HUGGINGFACE_TOKEN" ]; then \
-        huggingface-cli login --token $HUGGINGFACE_TOKEN; \
+    huggingface-cli login --token $HUGGINGFACE_TOKEN; \
     fi
 
 # SageMaker Processing Job用の環境変数
