@@ -7,10 +7,18 @@ Decomposes panorama image into foreground/background layers
 import os
 import json
 import argparse
+import logging
 import shutil
 import torch
 import boto3
 from PIL import Image
+
+# Configure logging for CloudWatch
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 from hy3dworld import LayerDecomposition
 from hy3dworld.AngelSlim.gemm_quantization_processor import FluxFp8GeMMProcessor
@@ -21,12 +29,12 @@ class PanoramaDecomposer:
     def __init__(self, args):
         self.args = args
         
-        print("[Step 2] Initializing LayerDecomposition...")
+        logger.info("[Step 2] Initializing LayerDecomposition...")
         self.decomposer = LayerDecomposition(args)
         
         # Apply FP8 quantization to inpainting models
         if args.fp8_attention:
-            print("[Optimization] Enabling FP8 Attention for inpainting models")
+            logger.info("[Optimization] Enabling FP8 Attention for inpainting models")
             self.decomposer.inpaint_fg_model.transformer.set_attn_processor(
                 FluxFp8AttnProcessor2_0()
             )
@@ -35,17 +43,17 @@ class PanoramaDecomposer:
             )
         
         if args.fp8_gemm:
-            print("[Optimization] Enabling FP8 GeMM for inpainting models")
+            logger.info("[Optimization] Enabling FP8 GeMM for inpainting models")
             FluxFp8GeMMProcessor(self.decomposer.inpaint_fg_model.transformer)
             FluxFp8GeMMProcessor(self.decomposer.inpaint_sky_model.transformer)
     
     def decompose(self, panorama_path, labels_fg1, labels_fg2, classes="outdoor"):
         """Decompose panorama into layers"""
         
-        print(f"[Step 2] Decomposing panorama: {panorama_path}")
-        print(f"[Config] FG1 labels: {labels_fg1}")
-        print(f"[Config] FG2 labels: {labels_fg2}")
-        print(f"[Config] Scene class: {classes}")
+        logger.info(f"[Step 2] Decomposing panorama: {panorama_path}")
+        logger.info(f"[Config] FG1 labels: {labels_fg1}")
+        logger.info(f"[Config] FG2 labels: {labels_fg2}")
+        logger.info(f"[Config] Scene class: {classes}")
         
         # Run layer decomposition (calls internal methods)
         result = self.decomposer.run(
@@ -127,8 +135,8 @@ def main():
     with open(metadata_path, 'w') as f:
         json.dump(metadata, f, indent=2)
     
-    print(f"[Step 2 Complete] Layers saved to: {args.output_dir}")
-    print(f"[Output] Metadata: {metadata_path}")
+    logger.info(f"[Step 2 Complete] Layers saved to: {args.output_dir}")
+    logger.info(f"[Output] Metadata: {metadata_path}")
     
     # Upload to S3 if specified
     if args.s3_bucket:
@@ -137,7 +145,7 @@ def main():
         # Auto-generate prefix from theme if not specified
         s3_prefix = args.s3_prefix if args.s3_prefix else f"3dworlds/{args.theme}/layers/"
         
-        print(f"[S3 Upload] Uploading layer data to s3://{args.s3_bucket}/{s3_prefix}")
+        logger.info(f"[S3 Upload] Uploading layer data to s3://{args.s3_bucket}/{s3_prefix}")
         
         # Upload all files in output directory
         for root, dirs, files in os.walk(args.output_dir):
@@ -147,9 +155,9 @@ def main():
                 s3_key = f"{args.s3_prefix}{relative_path}"
                 
                 s3_client.upload_file(local_path, args.s3_bucket, s3_key)
-                print(f"  - Uploaded: {relative_path}")
+                logger.info(f"  - Uploaded: {relative_path}")
         
-        print(f"[S3 Upload] Complete")
+        logger.info(f"[S3 Upload] Complete")
     
     # Memory cleanup
     del decomposer

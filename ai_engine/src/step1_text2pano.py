@@ -6,9 +6,17 @@ Generates a 360-degree panorama image from text prompt using HunyuanWorld-1.0
 
 import os
 import argparse
+import logging
 import torch
 import boto3
 from PIL import Image
+
+# Configure logging for CloudWatch
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # HunyuanWorld imports
 from hy3dworld import Text2PanoramaPipelines
@@ -32,7 +40,7 @@ class Text2PanoramaGenerator:
         self.lora_path = "tencent/HunyuanWorld-1"
         self.model_path = "black-forest-labs/FLUX.1-dev"
         
-        print("[Step 1] Loading Text2Panorama pipeline...")
+        logger.info("[Step 1] Loading Text2Panorama pipeline...")
         
         # Load pipeline with bfloat16
         self.pipe = Text2PanoramaPipelines.from_pretrained(
@@ -56,15 +64,15 @@ class Text2PanoramaGenerator:
         
         # Apply FP8 quantization for memory efficiency
         if self.args.fp8_attention:
-            print("[Optimization] Enabling FP8 Attention")
+            logger.info("[Optimization] Enabling FP8 Attention")
             self.pipe.transformer.set_attn_processor(FluxFp8AttnProcessor2_0())
         
         if self.args.fp8_gemm:
-            print("[Optimization] Enabling FP8 GeMM")
+            logger.info("[Optimization] Enabling FP8 GeMM")
             FluxFp8GeMMProcessor(self.pipe.transformer)
         
         if self.args.cache:
-            print("[Optimization] Enabling DeepCache")
+            logger.info("[Optimization] Enabling DeepCache")
             self.helper = DeepCacheHelper(pipe=self.pipe)
             self.helper.set_params(cache_interval=3, cache_branch_id=0)
             self.helper.enable()
@@ -83,8 +91,8 @@ class Text2PanoramaGenerator:
         full_prompt = f"{prompt}, {self.general_positive_prompt}"
         full_negative = f"{negative_prompt}, {self.general_negative_prompt}"
         
-        print(f"[Step 1] Generating panorama from prompt: {prompt}")
-        print(f"[Config] Seed: {seed}, Steps: {self.num_inference_steps}")
+        logger.info(f"[Step 1] Generating panorama from prompt: {prompt}")
+        logger.info(f"[Config] Seed: {seed}, Steps: {self.num_inference_steps}")
         
         # Set random seed
         generator = torch.Generator(device="cuda").manual_seed(seed)
@@ -155,8 +163,8 @@ def main():
     output_path = os.path.join(args.output_dir, "panorama.png")
     panorama_image.save(output_path)
     
-    print(f"[Step 1 Complete] Panorama saved to: {output_path}")
-    print(f"[Output] Size: {panorama_image.size}")
+    logger.info(f"[Step 1 Complete] Panorama saved to: {output_path}")
+    logger.info(f"[Output] Size: {panorama_image.size}")
     
     # Upload to S3 if specified
     if args.s3_bucket:
@@ -166,9 +174,9 @@ def main():
         s3_prefix = args.s3_prefix if args.s3_prefix else f"3dworlds/{args.theme}/"
         s3_key = f"{s3_prefix}panorama.png"
         
-        print(f"[S3 Upload] Uploading to s3://{args.s3_bucket}/{s3_key}")
+        logger.info(f"[S3 Upload] Uploading to s3://{args.s3_bucket}/{s3_key}")
         s3_client.upload_file(output_path, args.s3_bucket, s3_key)
-        print(f"[S3 Upload] Complete: s3://{args.s3_bucket}/{s3_key}")
+        logger.info(f"[S3 Upload] Complete: s3://{args.s3_bucket}/{s3_key}")
     
     # Memory cleanup
     del generator
