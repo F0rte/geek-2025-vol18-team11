@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.5.0-cuda12.4-cudnn9-runtime
+FROM pytorch/pytorch:2.5.0-cuda12.4-cudnn9-devel
 
 # 作業ディレクトリ設定
 WORKDIR /opt/program
