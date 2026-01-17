@@ -50,6 +50,20 @@ RUN pip install --no-cache-dir \
     xformers==0.0.28.post2 \
     ultralytics==8.3.74 \
     segment-anything==1.0 \
+    sageattention==1.0.6 \
+    flash-attn>=2.7.0 \
+    py360convert==1.0.3 \
+    plyfile==1.1 \
+    addict==2.4.0 \
+    open-clip-torch==2.30.0 \
+    shapely==2.0.7 \
+    ftfy==6.1.1 \
+    imgaug==0.4.0 \
+    albumentations==0.5.2 \
+    pandas==2.2.3 \
+    filterpy==1.4.5 \
+    hydra-core==1.1.0 \
+    natsort \
     huggingface-hub \
     boto3
 
