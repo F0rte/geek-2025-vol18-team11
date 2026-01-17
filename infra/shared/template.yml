@@ -49,6 +49,17 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - "http://localhost:3000"
+              - "{{resolve:ssm:/team11/prod/frontend-url}}"
+            AllowedMethods:
+              - GET
+              - HEAD
+            AllowedHeaders:
+              - "*"
+            MaxAge: 300
 
   # ------------------------------------------------------------
   # OIDC Role
