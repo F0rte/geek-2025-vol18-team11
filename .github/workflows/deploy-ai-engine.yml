@@ -1,0 +1,100 @@
+name: Deploy AI Engine Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/ai_engine/**"
+      - "ai_engine/**"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      # ECRスタックのデプロイ
+      - name: Deploy ECR Stack
+        run: |
+          cd infra/ai_engine
+          aws cloudformation deploy \
+            --template-file ecr.yml \
+            --stack-name team11-ai-engine-ecr \
+            --parameter-overrides RepoName=team11-ai-engine-repo
+
+      # CodeBuildスタックのデプロイ
+      - name: Deploy CodeBuild Stack
+        run: |
+          cd infra/ai_engine
+          aws cloudformation deploy \
+            --template-file codebuild.yml \
+            --stack-name team11-ai-engine-codebuild \
+            --capabilities CAPABILITY_IAM \
+            --parameter-overrides \
+              GitHubOwner=${{ github.repository_owner }} \
+              GitHubRepo=${{ github.event.repository.name }} \
+              ECRRepositoryName=team11-ai-engine-repo
+
+  trigger-build:
+    needs: deploy-infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Start CodeBuild
+        id: codebuild
+        run: |
+          BUILD_ID=$(aws codebuild start-build \
+            --project-name team11-ai-container-build \
+            --source-version ${{ github.sha }} \
+            --query 'build.id' \
+            --output text)
+          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+
+      - name: Wait for CodeBuild completion
+        run: |
+          BUILD_ID="${{ steps.codebuild.outputs.build_id }}"
+          echo "Waiting for build $BUILD_ID to complete..."
+
+          while true; do
+            STATUS=$(aws codebuild batch-get-builds \
+              --ids "$BUILD_ID" \
+              --query 'builds[0].buildStatus' \
+              --output text)
+            
+            echo "Current status: $STATUS"
+            
+            if [[ "$STATUS" == "SUCCEEDED" ]]; then
+              echo "Build succeeded!"
+              exit 0
+            elif [[ "$STATUS" == "FAILED" ]] || [[ "$STATUS" == "FAULT" ]] || [[ "$STATUS" == "TIMED_OUT" ]] || [[ "$STATUS" == "STOPPED" ]]; then
+              echo "Build failed with status: $STATUS"
+              exit 1
+            fi
+            
+            sleep 30
+          done
+
+      - name: Get build logs URL
+        if: always()
+        run: |
+          BUILD_ID="${{ steps.codebuild.outputs.build_id }}"
+          REGION="us-east-1"
+          echo "CodeBuild Logs: https://$REGION.console.aws.amazon.com/codesuite/codebuild/projects/team11-ai-container-build/build/$BUILD_ID"
