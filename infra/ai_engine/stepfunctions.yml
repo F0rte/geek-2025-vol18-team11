@@ -49,6 +49,14 @@ Resources:
                   - "events:PutRule"
                   - "events:DescribeRule"
                 Resource: "*"
+        - PolicyName: LambdaInvokeAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:team11-data-writer-prod"
 
   AIEnginePipeline:
     Type: AWS::StepFunctions::StateMachine
@@ -197,6 +205,20 @@ Resources:
                 }
               },
               "ResultPath": "$.step3Result",
+              "Next": "RegisterToDB"
+            },
+            "RegisterToDB": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "team11-data-writer-prod",
+                "Payload": {
+                  "theme.$": "$.theme_ja",
+                  "png_uri.$": "States.Format('s3://{}/3dworlds/{}/panorama.png', $.s3Bucket, $.theme)",
+                  "ply_uris.$": "States.Array(States.Format('s3://{}/3dworlds/{}/mesh_layer0.ply', $.s3Bucket, $.theme), States.Format('s3://{}/3dworlds/{}/mesh_layer1.ply', $.s3Bucket, $.theme), States.Format('s3://{}/3dworlds/{}/mesh_layer2.ply', $.s3Bucket, $.theme), States.Format('s3://{}/3dworlds/{}/mesh_layer3.ply', $.s3Bucket, $.theme))"
+                }
+              },
+              "ResultPath": "$.dbResult",
               "Next": "Success"
             },
             "Success": {
