@@ -35,9 +35,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - "sagemaker:CreateProcessingJob"
-                  - "sagemaker:DescribeProcessingJob"
-                  - "sagemaker:StopProcessingJob"
+                  - "sagemaker:*"
                 Resource: "*"
               - Effect: Allow
                 Action:
