@@ -62,7 +62,7 @@ def generate_world(request: GenerateRequest):
 
 以下のJSON形式で出力してください:
 {{
-  "theme": "簡潔な英語テーマ名（スネークケース、10文字以内）",
+  "theme": "簡潔な英語テーマ名（ハイフン区切り、10文字以内、英数字とハイフンのみ使用）",
   "prompt_en": "詳細な英語プロンプト（HunyuanWorld用）"
 }}
 
@@ -104,6 +104,10 @@ JSONのみを出力し、他の説明は不要です。"""
         
         if not theme or not prompt_en:
             raise ValueError(f"Invalid Bedrock response: {result}")
+        
+        # テーマ名をSageMaker ProcessingJob名に適合させる（英数字とハイフンのみ）
+        theme = re.sub(r'[^a-zA-Z0-9-]', '-', theme)
+        theme = re.sub(r'-+', '-', theme).strip('-')  # 連続ハイフンを1つに、前後のハイフンを削除
         
         logger.info(f"Generated theme: {theme}, prompt_en: {prompt_en}")
         
