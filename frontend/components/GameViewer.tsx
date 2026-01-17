@@ -264,6 +264,17 @@ export default function GameViewer() {
                 const child = state.scene.children[i];
                 if (!state.enemies.includes(child as THREE.Mesh)) {
                     state.scene.remove(child);
+                    // Dispose geometry and material to free GPU memory
+                    if (child instanceof THREE.Points || child instanceof THREE.Mesh) {
+                        if (child.geometry) child.geometry.dispose();
+                        if (child.material) {
+                            if (Array.isArray(child.material)) {
+                                child.material.forEach(m => m.dispose());
+                            } else {
+                                child.material.dispose();
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -362,6 +373,17 @@ export default function GameViewer() {
                 const child = state.scene.children[i];
                 if (!state.enemies.includes(child as THREE.Mesh)) {
                     state.scene.remove(child);
+                    // Dispose geometry and material to free GPU memory
+                    if (child instanceof THREE.Points || child instanceof THREE.Mesh) {
+                        if (child.geometry) child.geometry.dispose();
+                        if (child.material) {
+                            if (Array.isArray(child.material)) {
+                                child.material.forEach(m => m.dispose());
+                            } else {
+                                child.material.dispose();
+                            }
+                        }
+                    }
                 }
             }
         }
