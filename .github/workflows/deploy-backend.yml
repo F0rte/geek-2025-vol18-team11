@@ -49,6 +49,12 @@ jobs:
           FRONTEND_URL=$(aws ssm get-parameter --name /team11/prod/frontend-url --query Parameter.Value --output text)
           echo "frontend_url=$FRONTEND_URL" >> $GITHUB_OUTPUT
 
+      - name: Get S3 Bucket Name
+        id: get-s3-bucket
+        run: |
+          S3_BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name team11-shared-stack --query "Stacks[0].Outputs[?OutputKey=='SourceBucketName'].OutputValue" --output text)
+          echo "s3_bucket_name=$S3_BUCKET_NAME" >> $GITHUB_OUTPUT
+
       - name: Package CloudFormation Template
         run: |
           aws cloudformation package \
@@ -65,7 +71,8 @@ jobs:
             --parameter-overrides \
               EnvType=prod \
               ImageTag=${{ github.sha }} \
-              FrontendUrl=${{ steps.get-frontend-url.outputs.frontend_url }}
+              FrontendUrl=${{ steps.get-frontend-url.outputs.frontend_url }} \
+              S3BucketName=${{ steps.get-s3-bucket.outputs.s3_bucket_name }}
 
       - name: Update SSM
         if: success()

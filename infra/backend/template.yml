@@ -10,6 +10,9 @@ Parameters:
   FrontendUrl:
     Type: String
     Description: Frontend URL for CORS configuration
+  S3BucketName:
+    Type: String
+    Description: S3 bucket name for data source
 
 Resources:
   # ------------------------------------------------------------
@@ -27,7 +30,9 @@ Resources:
   # ------------------------------------------------------------
   Lambda:
     Type: AWS::CloudFormation::Stack
-    DependsOn: ECR
+    DependsOn:
+      - ECR
+      - DynamoDB
     Properties:
       TemplateURL: ./lambda.yml
       Parameters:
@@ -35,6 +40,8 @@ Resources:
         ImageTag: !Ref ImageTag
         EnvType: !Ref EnvType
         FrontendUrl: !Ref FrontendUrl
+        DynamoDBTableName: !GetAtt DynamoDB.Outputs.MeshMetaTableName
+        S3BucketName: !Ref S3BucketName
 
   # ------------------------------------------------------------
   # DynamoDB (Mesh Metadata)
