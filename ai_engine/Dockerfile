@@ -29,6 +29,19 @@ RUN pip install --no-cache-dir \
     trimesh==4.5.3 \
     tqdm==4.67.1 \
     pyyaml==6.0.2 \
+    easydict==1.9 \
+    omegaconf==2.1.2 \
+    einops==0.4.1 \
+    onnx==1.17.0 \
+    onnxruntime-gpu==1.21.1 \
+    kornia==0.8.0 \
+    scikit-image==0.24.0 \
+    scikit-learn==1.6.1 \
+    scipy==1.15.2 \
+    matplotlib==3.10.1 \
+    pytorch-lightning==2.4.0 \
+    imageio==2.37.0 \
+    imageio-ffmpeg==0.4.9 \
     huggingface-hub \
     boto3
 

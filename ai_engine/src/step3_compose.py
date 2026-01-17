@@ -7,9 +7,17 @@ Composes 3D mesh from decomposed layers
 import os
 import json
 import argparse
+import logging
 import torch
 import boto3
 import open3d as o3d
+
+# Configure logging for CloudWatch
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 from hy3dworld import WorldComposer
 
@@ -22,7 +30,7 @@ class MeshComposer:
         target_size = 3840  # 2x resolution for better quality
         kernel_scale = max(1, int(target_size / 1920))
         
-        print("[Step 3] Initializing WorldComposer...")
+        logger.info("[Step 3] Initializing WorldComposer...")
         
         self.composer = WorldComposer(
             device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
@@ -32,15 +40,15 @@ class MeshComposer:
             kernel_scale=kernel_scale,
         )
         
-        print(f"[Config] Resolution: {target_size}x{target_size//2}")
-        print(f"[Config] Kernel scale: {kernel_scale}")
+        logger.info(f"[Config] Resolution: {target_size}x{target_size//2}")
+        logger.info(f"[Config] Kernel scale: {kernel_scale}")
     
     def compose(self, panorama_path, layers_dir, output_dir):
         """Compose 3D mesh from layer data"""
         
-        print(f"[Step 3] Composing 3D world from layers")
-        print(f"[Input] Panorama: {panorama_path}")
-        print(f"[Input] Layers dir: {layers_dir}")
+        logger.info(f"[Step 3] Composing 3D world from layers")
+        logger.info(f"[Input] Panorama: {panorama_path}")
+        logger.info(f"[Input] Layers dir: {layers_dir}")
         
         # Compose world using WorldComposer
         self.composer.run(
@@ -50,7 +58,7 @@ class MeshComposer:
             export_drc=self.args.export_drc
         )
         
-        print(f"[Step 3] Mesh composition completed")
+        logger.info(f"[Step 3] Mesh composition completed")
 
 
 def main():
@@ -92,7 +100,7 @@ def main():
     with open(metadata_path, 'r') as f:
         metadata = json.load(f)
     
-    print(f"[Step 3] Loaded metadata: {metadata}")
+    logger.info(f"[Step 3] Loaded metadata: {metadata}")
     
     # Panorama path
     panorama_path = os.path.join(args.input_dir, "panorama.png")
@@ -112,7 +120,7 @@ def main():
         output_dir=args.output_dir
     )
     
-    print(f"[Step 3 Complete] Meshes saved to: {args.output_dir}")
+    logger.info(f"[Step 3 Complete] Meshes saved to: {args.output_dir}")
     
     # List output files
     output_files = []
@@ -120,10 +128,10 @@ def main():
         if fname.endswith(('.ply', '.drc', '.glb')):
             fpath = os.path.join(args.output_dir, fname)
             size_mb = os.path.getsize(fpath) / (1024 * 1024)
-            print(f"  - {fname} ({size_mb:.2f} MB)")
+            logger.info(f"  - {fname} ({size_mb:.2f} MB)")
             output_files.append(fname)
     
-    print(f"[Output] Generated {len(output_files)} mesh files")
+    logger.info(f"[Output] Generated {len(output_files)} mesh files")
     
     # Upload to S3 if specified
     if args.s3_bucket:
@@ -132,7 +140,7 @@ def main():
         # Auto-generate prefix from theme if not specified
         s3_prefix = args.s3_prefix if args.s3_prefix else f"3dworlds/{args.theme}/"
         
-        print(f"[S3 Upload] Uploading mesh files to s3://{args.s3_bucket}/{s3_prefix}")
+        logger.info(f"[S3 Upload] Uploading mesh files to s3://{args.s3_bucket}/{s3_prefix}")
         
         for fname in output_files:
             local_path = os.path.join(args.output_dir, fname)
@@ -140,9 +148,9 @@ def main():
             
             s3_client.upload_file(local_path, args.s3_bucket, s3_key)
             size_mb = os.path.getsize(local_path) / (1024 * 1024)
-            print(f"  - Uploaded: {fname} ({size_mb:.2f} MB)")
+            logger.info(f"  - Uploaded: {fname} ({size_mb:.2f} MB)")
         
-        print(f"[S3 Upload] Complete: s3://{args.s3_bucket}/{args.s3_prefix}")
+        logger.info(f"[S3 Upload] Complete: s3://{args.s3_bucket}/{args.s3_prefix}")
     
     # Memory cleanup
     del composer
