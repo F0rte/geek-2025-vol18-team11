@@ -57,6 +57,24 @@ Resources:
                 Action:
                   - s3:GetObject
                 Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
+        - PolicyName: BedrockInvokeAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: "arn:aws:bedrock:*::foundation-model/amazon.nova-micro-v1:0"
+        - PolicyName: StepFunctionsAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                  - states:DescribeExecution
+                Resource:
+                  - Fn::ImportValue: Team11AIEnginePipelineArn
 
   BackendFunction:
     Type: AWS::Lambda::Function
@@ -75,6 +93,8 @@ Resources:
           FRONTEND_URL: "{{resolve:ssm:/team11/prod/frontend-url}}"
           DYNAMODB_TABLE_NAME: !Ref DynamoDBTableName
           S3_BUCKET_NAME: !Ref S3BucketName
+          STATE_MACHINE_ARN:
+            Fn::ImportValue: Team11AIEnginePipelineArn
 
   FunctionUrl:
     Type: AWS::Lambda::Url
