@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: AI Engine Infrastructure Stack
+
+Parameters:
+  GitHubOwner:
+    Type: String
+    Description: GitHub repository owner
+  GitHubRepo:
+    Type: String
+    Description: GitHub repository name
+
+Resources:
+  ECRStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./ecr.yml
+      Parameters:
+        RepoName: team11-ai-engine-repo
+
+  CodeBuildStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: ECRStack
+    Properties:
+      TemplateURL: ./codebuild.yml
+      Parameters:
+        GitHubOwner: !Ref GitHubOwner
+        GitHubRepo: !Ref GitHubRepo
+        ECRRepositoryName: team11-ai-engine-repo
+
+Outputs:
+  ECRRepositoryUri:
+    Value: !GetAtt ECRStack.Outputs.RepositoryUri
+    Description: AI Engine ECR Repository URI
+  CodeBuildProjectName:
+    Value: !GetAtt CodeBuildStack.Outputs.ProjectName
+    Description: CodeBuild Project Name

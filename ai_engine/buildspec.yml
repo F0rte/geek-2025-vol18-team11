@@ -1,0 +1,36 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+      - IMAGE_TAG=${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}
+      - IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      - echo Image URI is $IMAGE_URI
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      # HuggingFace Tokenを環境変数から渡す
+      - |
+        docker build \
+          --build-arg HUGGINGFACE_TOKEN=$HUGGINGFACE_TOKEN \
+          -t $IMAGE_URI \
+          -f ai_engine/Dockerfile \
+          .
+      - echo Build completed on `date`
+  post_build:
+    commands:
+      - echo Pushing the Docker image to ECR...
+      - docker push $IMAGE_URI
+      - echo Writing image definitions file...
+      - printf '{"ImageURI":"%s"}' $IMAGE_URI > imageDetail.json
+
+artifacts:
+  files:
+    - imageDetail.json
+
+cache:
+  paths:
+    - "/root/.cache/pip/**/*"

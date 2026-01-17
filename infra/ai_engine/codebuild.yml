@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CodeBuild Project for AI Container Build
+
+Parameters:
+  GitHubOwner:
+    Type: String
+    Default: your-github-org
+  GitHubRepo:
+    Type: String
+    Default: geek-2025-vol18-team11
+  ECRRepositoryName:
+    Type: String
+    Default: team11-ai-engine-repo
+
+Resources:
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
+      Policies:
+        - PolicyName: CodeBuildLogsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+        - PolicyName: SecretsManagerReadPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:huggingface-token-*
+
+  AIContainerBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: team11-ai-container-build
+      Description: Build AI model execution container
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Source:
+        Type: GITHUB
+        Location: !Sub https://github.com/${GitHubOwner}/${GitHubRepo}.git
+        BuildSpec: ai_engine/buildspec.yml
+        GitCloneDepth: 1
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_LARGE
+        Image: aws/codebuild/standard:7.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: ECR_REGISTRY
+            Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com
+          - Name: ECR_REPOSITORY
+            Value: !Ref ECRRepositoryName
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref AWS::Region
+          - Name: HUGGINGFACE_TOKEN
+            Type: SECRETS_MANAGER
+            Value: huggingface-token
+      Cache:
+        Type: LOCAL
+        Modes:
+          - LOCAL_DOCKER_LAYER_CACHE
+          - LOCAL_CUSTOM_CACHE
+      TimeoutInMinutes: 120
+
+Outputs:
+  ProjectName:
+    Value: !Ref AIContainerBuildProject
+    Description: CodeBuild Project Name
+  ProjectArn:
+    Value: !GetAtt AIContainerBuildProject.Arn
+    Description: CodeBuild Project ARN
