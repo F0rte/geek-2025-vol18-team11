@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Description: Team11 Backend Parent Stack
 
 Parameters:
@@ -36,6 +36,32 @@ Resources:
         EnvType: !Ref EnvType
         FrontendUrl: !Ref FrontendUrl
 
+  # ------------------------------------------------------------
+  # DynamoDB (Mesh Metadata)
+  # ------------------------------------------------------------
+  DynamoDB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./dynamodb.yml
+      Parameters:
+        EnvType: !Ref EnvType
+
+  # ------------------------------------------------------------
+  # Data Writer Lambda
+  # ------------------------------------------------------------
+  DataWriterLambda:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: DynamoDB
+    Properties:
+      TemplateURL: ./data-writer-lambda.yml
+      Parameters:
+        EnvType: !Ref EnvType
+        DynamoDBTableName: !GetAtt DynamoDB.Outputs.MeshMetaTableName
+
 Outputs:
   ApiEndpoint:
     Value: !GetAtt Lambda.Outputs.ApiUrl
+  MeshMetaTableName:
+    Value: !GetAtt DynamoDB.Outputs.MeshMetaTableName
+  DataWriterFunctionArn:
+    Value: !GetAtt DataWriterLambda.Outputs.DataWriterFunctionArn
