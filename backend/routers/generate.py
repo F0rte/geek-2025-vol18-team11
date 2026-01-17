@@ -72,7 +72,11 @@ JSONのみを出力し、他の説明は不要です。"""
             "messages": [
                 {
                     "role": "user",
-                    "content": bedrock_prompt
+                    "content": [
+                        {
+                            "text": bedrock_prompt
+                        }
+                    ]
                 }
             ],
             "inferenceConfig": {
