@@ -83,6 +83,7 @@ Resources:
                   - ssm:*
                   - amplify:*
                   - logs:*
+                  - dynamodb:*
 
 Outputs:
   RoleArn:
