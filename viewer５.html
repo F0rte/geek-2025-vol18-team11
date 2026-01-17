@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hunyuan World Shooter - Optimized</title>
+    <style>
+        body { 
+            margin: 0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #222;
+            color: #eee;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #main-wrapper {
+            display: flex;
+            background: #111;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            gap: 20px;
+        }
+
+        #game-container {
+            width: 800px;
+            height: 600px;
+            position: relative;
+            background: #000;
+            border: 2px solid #444;
+        }
+        
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #sidebar {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .panel {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #555;
+        }
+        h2 { margin-top: 0; color: #4CAF50; }
+        h3 { margin-top: 10px; margin-bottom: 5px; color: #ffaaaa; }
+        ul { padding-left: 20px; margin: 5px 0; }
+        li { margin-bottom: 5px; }
+        .key {
+            background: #555; padding: 2px 6px;
+            border-radius: 4px; border: 1px solid #777;
+            font-weight: bold; font-family: monospace;
+        }
+
+        /* オーバーレイUI */
+        #upload-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 30;
+        }
+        
+        #pause-overlay {
+            display: none;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            flex-direction: column;
+            justify-content: center; align-items: center; z-index: 20;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .upload-btn {
+            background: #4CAF50; color: white; padding: 15px 30px;
+            border: none; border-radius: 5px; cursor: pointer;
+            font-size: 18px; font-weight: bold;
+        }
+        .upload-btn:hover { background: #45a049; }
+        #file-input { display: none; }
+        #loading { display: none; margin-top: 20px; color: #aaa; font-size: 18px; }
+
+        /* ゲーム内UI */
+        #game-ui {
+            display: none;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        #crosshair {
+            position: absolute; top: 50%; left: 50%;
+            width: 6px; height: 6px;
+            background: red;
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #score-board {
+            position: absolute; top: 20px; right: 20px;
+            color: #fff; font-size: 28px; font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="main-wrapper">
+        <div id="game-container">
+            <div id="upload-overlay">
+                <h2 style="color: white;">Load 3D World</h2>
+                <label for="file-input" class="upload-btn">Select PLY/DRC Files</label>
+                <input id="file-input" type="file" accept=".ply,.drc" multiple>
+                <div id="loading">Optimizing & Loading Points...</div>
+            </div>
+
+            <div id="pause-overlay">
+                <h1>Click Screen to Play</h1>
+                <p>Press ESC to Pause / Show Cursor</p>
+            </div>
+
+            <div id="game-ui">
+                <div id="crosshair"></div>
+                <div id="score-board">SCORE: 0</div>
+            </div>
+        </div>
+
+        <div id="sidebar">
+            <div class="panel">
+                <h2>Cyber Point Shooter</h2>
+                <p>Hunyuan 3D World のデータを軽量化して生成された電脳空間で戦うシューティング。</p>
+            </div>
+            <div class="panel">
+                <h3>Controls</h3>
+                <ul>
+                    <li><span class="key">Click</span> : ゲーム開始</li>
+                    <li><span class="key">ESC</span> : 中断（マウス表示）</li>
+                    <li><span class="key">Mouse</span> : 視点移動</li>
+                    <li><span class="key">Click</span> : 射撃</li>
+                    <li><span class="key">WASD</span> : 移動</li>
+                </ul>
+            </div>
+            <div class="panel" style="font-size:12px; color:#aaa;">
+                ※読み込み時にデータの90%を間引きして高速化しています。
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/PLYLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/DRACOLoader.js"></script>
+
+    <script>
+        // --- 設定 ---
+        const GAME_WIDTH = 800;
+        const GAME_HEIGHT = 600;
+        
+        // ★重要：軽量化レベル（1=間引かない、10=10個に1個だけ表示）★
+        // 重い場合はここを 20 とかに増やしてください
+        const SKIP_RATIO = 10; 
+
+        // --- Three.js 初期化 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050505);
+        scene.fog = new THREE.FogExp2(0x050505, 0.3); // 奥を隠す
+
+        const camera = new THREE.PerspectiveCamera(75, GAME_WIDTH / GAME_HEIGHT, 0.1, 80);
+        
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: false, 
+            powerPreference: "high-performance"
+        });
+        renderer.setSize(GAME_WIDTH, GAME_HEIGHT);
+        renderer.setPixelRatio(1);
+        
+        const container = document.getElementById('game-container');
+        container.insertBefore(renderer.domElement, container.firstChild);
+
+        // --- ゲームステート変数 ---
+        let gameActive = false;
+        let isPaused = true;
+        let score = 0;
+        const enemies = [];
+        const scoreElement = document.getElementById('score-board');
+        
+        // 移動・操作変数
+        const moveSpeed = 0.04;
+        const maxDistance = 0.8;
+        const keys = { w: false, a: false, s: false, d: false };
+        
+        // 敵スポーン設定
+        let lastSpawnTime = 0;
+        const spawnRate = 1200;
+
+        // UI要素
+        const pauseOverlay = document.getElementById('pause-overlay');
+        const uploadOverlay = document.getElementById('upload-overlay');
+        const gameUI = document.getElementById('game-ui');
+
+        // --- イベントリスナー設定 ---
+        
+        // ゲーム開始・再開処理
+        pauseOverlay.addEventListener('click', () => {
+            if (gameActive) renderer.domElement.requestPointerLock();
+        });
+        
+        renderer.domElement.addEventListener('click', () => {
+            if (gameActive && isPaused) renderer.domElement.requestPointerLock();
+        });
+
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === renderer.domElement) {
+                isPaused = false;
+                pauseOverlay.style.display = 'none';
+            } else {
+                isPaused = true;
+                if (gameActive) pauseOverlay.style.display = 'flex';
+            }
+        });
+
+        // 射撃処理
+        document.addEventListener('mousedown', (e) => {
+            if (!isPaused && gameActive && e.button === 0) shoot();
+        });
+
+        // 視点移動
+        document.addEventListener('mousemove', (event) => {
+            if (isPaused || !gameActive) return;
+            
+            const sensitivity = 0.002;
+            const movementX = event.movementX || 0;
+            const movementY = event.movementY || 0;
+
+            const qY = new THREE.Quaternion();
+            qY.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -movementX * sensitivity);
+            camera.quaternion.premultiply(qY);
+
+            const qX = new THREE.Quaternion();
+            qX.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -movementY * sensitivity);
+            camera.quaternion.multiply(qX);
+        });
+
+        // 移動キー入力
+        document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+        document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+
+        // --- ゲームロジック ---
+
+        function spawnEnemy(time) {
+            if (isPaused || !gameActive) return;
+            if (time - lastSpawnTime < spawnRate) return;
+            lastSpawnTime = time;
+
+            // 敵：ワイヤーフレームの赤い箱
+            const geometry = new THREE.BoxGeometry(0.06, 0.06, 0.06);
+            const material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+            const enemy = new THREE.Mesh(geometry, material);
+
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 2.0;
+            const height = 0.2 + Math.random() * 0.4;
+
+            enemy.position.set(
+                camera.position.x + Math.cos(angle) * radius,
+                height,
+                camera.position.z + Math.sin(angle) * radius
+            );
+            scene.add(enemy);
+            enemies.push(enemy);
+        }
+
+        const raycaster = new THREE.Raycaster();
+        const center = new THREE.Vector2(0, 0);
+
+        function shoot() {
+            raycaster.setFromCamera(center, camera);
+            const intersects = raycaster.intersectObjects(enemies);
+
+            if (intersects.length > 0) {
+                const hitEnemy = intersects[0].object;
+                scene.remove(hitEnemy);
+                enemies.splice(enemies.indexOf(hitEnemy), 1);
+                score += 100;
+                scoreElement.innerText = "SCORE: " + score;
+            }
+        }
+
+        function updateGame() {
+            if (isPaused || !gameActive) return;
+
+            const speed = 0.015;
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                enemy.lookAt(camera.position);
+                enemy.translateZ(speed);
+                enemy.rotateZ(0.05);
+
+                if (enemy.position.distanceTo(camera.position) < 0.1) {
+                    scene.remove(enemy);
+                    enemies.splice(i, 1);
+                    score = Math.max(0, score - 50);
+                    scoreElement.innerText = "SCORE: " + score;
+                }
+            }
+        }
+
+        function handleMovement() {
+            if (isPaused || !gameActive) return;
+
+            const dir = new THREE.Vector3();
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            forward.y = 0; right.y = 0;
+            forward.normalize(); right.normalize();
+
+            if (keys.w) dir.add(forward);
+            if (keys.s) dir.sub(forward);
+            if (keys.d) dir.add(right);
+            if (keys.a) dir.sub(right);
+
+            if (dir.length() > 0) {
+                dir.normalize().multiplyScalar(moveSpeed);
+                const nextPos = camera.position.clone().add(dir);
+                if (nextPos.length() < maxDistance) {
+                    camera.position.add(dir);
+                }
+            }
+        }
+
+        function animate(time) {
+            requestAnimationFrame(animate);
+            handleMovement();
+            spawnEnemy(time);
+            updateGame();
+            renderer.render(scene, camera);
+        }
+        animate(0);
+
+
+        // --- ★重要：軽量化ロード処理 ---
+        const plyLoader = new THREE.PLYLoader();
+        const dracoLoader = new THREE.DRACOLoader();
+        dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/libs/draco/');
+
+        // メッシュを点群に変換しつつ、間引く関数
+        function processAndAddGeometry(originalGeometry) {
+            const positions = originalGeometry.attributes.position;
+            const colors = originalGeometry.attributes.color;
+
+            // 新しいデータ用配列
+            const newPositions = [];
+            const newColors = [];
+
+            // SKIP_RATIO 分だけ飛ばしてデータを取得（ここが軽量化のキモ）
+            for (let i = 0; i < positions.count; i += SKIP_RATIO) {
+                newPositions.push(
+                    positions.getX(i), 
+                    positions.getY(i), 
+                    positions.getZ(i)
+                );
+                
+                if (colors) {
+                    newColors.push(
+                        colors.getX(i), 
+                        colors.getY(i), 
+                        colors.getZ(i)
+                    );
+                }
+            }
+
+            // 新しいGeometryを作成
+            const simplifiedGeometry = new THREE.BufferGeometry();
+            simplifiedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(newPositions, 3));
+            if (colors) {
+                simplifiedGeometry.setAttribute('color', new THREE.Float32BufferAttribute(newColors, 3));
+            }
+
+            // マテリアル設定（点を少し大きくして隙間を埋める）
+            const material = new THREE.PointsMaterial({ 
+                vertexColors: !!colors,
+                color: 0xffffff,
+                size: 0.04, // 点の大きさ
+                sizeAttenuation: true
+            });
+
+            const points = new THREE.Points(simplifiedGeometry, material);
+            
+            // 向き補正
+            points.rotateX(-Math.PI / 2);
+            points.rotateZ(-Math.PI / 2);
+            
+            scene.add(points);
+        }
+
+
+        document.getElementById('file-input').addEventListener('change', function(e) {
+            const files = e.target.files;
+            if (files.length === 0) return;
+
+            document.getElementById('loading').style.display = 'block';
+            let loadedCount = 0;
+
+            // 敵以外の古いオブジェクトを掃除
+            for(let i = scene.children.length - 1; i >= 0; i--){
+                if(!enemies.includes(scene.children[i])) {
+                    scene.remove(scene.children[i]);
+                }
+            }
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    
+                    const onGeometryReady = (geometry) => {
+                        processAndAddGeometry(geometry); // ★間引き処理を実行
+                        
+                        loadedCount++;
+                        if (loadedCount === files.length) {
+                            // 全ファイル完了
+                            uploadOverlay.style.display = 'none';
+                            gameUI.style.display = 'block';
+                            gameActive = true;
+                            pauseOverlay.style.display = 'flex';
+                            camera.position.set(0, 0.5, 0);
+                        }
+                    };
+
+                    if (file.name.endsWith('.ply')) {
+                        // 少し遅延させてUI固まり防止
+                        setTimeout(() => {
+                            onGeometryReady(plyLoader.parse(event.target.result));
+                        }, 50);
+                    } else if (file.name.endsWith('.drc')) {
+                        dracoLoader.decodeDracoFile(event.target.result, onGeometryReady);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        });
+
+    </script>
+</body>
+</html>
