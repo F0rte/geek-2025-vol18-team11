@@ -44,6 +44,12 @@ RUN pip install --no-cache-dir \
     imageio-ffmpeg==0.4.9 \
     sentencepiece==0.2.0 \
     protobuf==5.29.3 \
+    peft==0.15.0 \
+    safetensors==0.5.3 \
+    timm==1.0.13 \
+    xformers==0.0.28.post2 \
+    ultralytics==8.3.74 \
+    segment-anything==1.0 \
     huggingface-hub \
     boto3
 
