@@ -152,7 +152,7 @@ def main():
             for file in files:
                 local_path = os.path.join(root, file)
                 relative_path = os.path.relpath(local_path, args.output_dir)
-                s3_key = f"{args.s3_prefix}{relative_path}"
+                s3_key = f"{s3_prefix}{relative_path}"
                 
                 s3_client.upload_file(local_path, args.s3_bucket, s3_key)
                 logger.info(f"  - Uploaded: {relative_path}")

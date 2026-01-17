@@ -83,18 +83,6 @@ Resources:
                     "VolumeSizeInGB": 50
                   }
                 },
-                "ProcessingOutputConfig": {
-                  "Outputs": [
-                    {
-                      "OutputName": "panorama",
-                      "S3Output": {
-                        "S3Uri.$": "States.Format('s3://{}/3dworlds/{}/', $.s3Bucket, $.theme)",
-                        "LocalPath": "/opt/ml/processing/output",
-                        "S3UploadMode": "EndOfJob"
-                      }
-                    }
-                  ]
-                },
                 "StoppingCondition": {
                   "MaxRuntimeInSeconds": 3600
                 },
@@ -133,18 +121,6 @@ Resources:
                     }
                   }
                 ],
-                "ProcessingOutputConfig": {
-                  "Outputs": [
-                    {
-                      "OutputName": "layers",
-                      "S3Output": {
-                        "S3Uri.$": "States.Format('s3://{}/3dworlds/{}/layers/', $.s3Bucket, $.theme)",
-                        "LocalPath": "/opt/ml/processing/output",
-                        "S3UploadMode": "EndOfJob"
-                      }
-                    }
-                  ]
-                },
                 "StoppingCondition": {
                   "MaxRuntimeInSeconds": 1800
                 },
@@ -183,18 +159,6 @@ Resources:
                     }
                   }
                 ],
-                "ProcessingOutputConfig": {
-                  "Outputs": [
-                    {
-                      "OutputName": "meshes",
-                      "S3Output": {
-                        "S3Uri.$": "States.Format('s3://{}/3dworlds/{}/', $.s3Bucket, $.theme)",
-                        "LocalPath": "/opt/ml/processing/output",
-                        "S3UploadMode": "EndOfJob"
-                      }
-                    }
-                  ]
-                },
                 "StoppingCondition": {
                   "MaxRuntimeInSeconds": 2400
                 },

@@ -144,13 +144,13 @@ def main():
         
         for fname in output_files:
             local_path = os.path.join(args.output_dir, fname)
-            s3_key = f"{args.s3_prefix}{fname}"
+            s3_key = f"{s3_prefix}{fname}"
             
             s3_client.upload_file(local_path, args.s3_bucket, s3_key)
             size_mb = os.path.getsize(local_path) / (1024 * 1024)
             logger.info(f"  - Uploaded: {fname} ({size_mb:.2f} MB)")
         
-        logger.info(f"[S3 Upload] Complete: s3://{args.s3_bucket}/{args.s3_prefix}")
+        logger.info(f"[S3 Upload] Complete: s3://{args.s3_bucket}/{s3_prefix}")
     
     # Memory cleanup
     del composer
