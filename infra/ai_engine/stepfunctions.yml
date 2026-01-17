@@ -110,17 +110,6 @@ Resources:
                     "VolumeSizeInGB": 50
                   }
                 },
-                "ProcessingInputs": [
-                  {
-                    "InputName": "panorama",
-                    "S3Input": {
-                      "S3Uri.$": "States.Format('s3://{}/3dworlds/{}/', $.s3Bucket, $.theme)",
-                      "LocalPath": "/opt/ml/processing/input",
-                      "S3DataType": "S3Prefix",
-                      "S3InputMode": "File"
-                    }
-                  }
-                ],
                 "StoppingCondition": {
                   "MaxRuntimeInSeconds": 1800
                 },
@@ -148,17 +137,6 @@ Resources:
                     "VolumeSizeInGB": 100
                   }
                 },
-                "ProcessingInputs": [
-                  {
-                    "InputName": "layers",
-                    "S3Input": {
-                      "S3Uri.$": "States.Format('s3://{}/3dworlds/{}/layers/', $.s3Bucket, $.theme)",
-                      "LocalPath": "/opt/ml/processing/input",
-                      "S3DataType": "S3Prefix",
-                      "S3InputMode": "File"
-                    }
-                  }
-                ],
                 "StoppingCondition": {
                   "MaxRuntimeInSeconds": 2400
                 },

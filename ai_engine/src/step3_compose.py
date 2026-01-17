@@ -88,9 +88,43 @@ def main():
     
     args = parser.parse_args()
     
-    # Verify input directory
-    if not os.path.exists(args.input_dir):
-        raise FileNotFoundError(f"Input directory not found: {args.input_dir}")
+    # Create input/output directories
+    os.makedirs(args.input_dir, exist_ok=True)
+    os.makedirs(args.output_dir, exist_ok=True)
+    
+    # Download layer data from S3
+    s3_client = boto3.client('s3', region_name='ap-northeast-1')
+    s3_prefix = f"3dworlds/{args.theme}/layers/"
+    
+    logger.info(f"[S3 Download] Downloading layer data from s3://{args.s3_bucket}/{s3_prefix}")
+    
+    # List all objects under the prefix
+    paginator = s3_client.get_paginator('list_objects_v2')
+    pages = paginator.paginate(Bucket=args.s3_bucket, Prefix=s3_prefix)
+    
+    download_count = 0
+    for page in pages:
+        if 'Contents' not in page:
+            continue
+        for obj in page['Contents']:
+            s3_key = obj['Key']
+            # Skip directory markers
+            if s3_key.endswith('/'):
+                continue
+            
+            # Get relative path
+            relative_path = os.path.relpath(s3_key, s3_prefix)
+            local_path = os.path.join(args.input_dir, relative_path)
+            
+            # Create subdirectories if needed
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            
+            # Download file
+            s3_client.download_file(args.s3_bucket, s3_key, local_path)
+            download_count += 1
+            logger.info(f"  - Downloaded: {relative_path}")
+    
+    logger.info(f"[S3 Download] Complete: {download_count} files downloaded")
     
     # Load metadata
     metadata_path = os.path.join(args.input_dir, "decomposition_metadata.json")

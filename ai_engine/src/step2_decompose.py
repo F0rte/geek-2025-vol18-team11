@@ -101,13 +101,18 @@ def main():
     
     args = parser.parse_args()
     
-    # Verify input file exists
-    panorama_path = os.path.join(args.input_dir, "panorama.png")
-    if not os.path.exists(panorama_path):
-        raise FileNotFoundError(f"Panorama not found: {panorama_path}")
-    
-    # Create output directory
+    # Create input/output directories
+    os.makedirs(args.input_dir, exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
+    
+    # Download panorama.png from S3
+    panorama_path = os.path.join(args.input_dir, "panorama.png")
+    s3_client = boto3.client('s3', region_name='ap-northeast-1')
+    s3_key = f"3dworlds/{args.theme}/panorama.png"
+    
+    logger.info(f"[S3 Download] Downloading s3://{args.s3_bucket}/{s3_key}")
+    s3_client.download_file(args.s3_bucket, s3_key, panorama_path)
+    logger.info(f"[S3 Download] Complete: {panorama_path}")
     
     # Copy panorama to output for reference
     shutil.copy(panorama_path, os.path.join(args.output_dir, "panorama.png"))
