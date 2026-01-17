@@ -66,9 +66,13 @@ RUN if [ -n "$HUGGINGFACE_TOKEN" ]; then \
         huggingface-cli login --token $HUGGINGFACE_TOKEN; \
     fi
 
+# Copy custom scripts for SageMaker Processing Job
+COPY ai_engine/src /opt/program/src
+
 # SageMaker Processing Job用の環境変数
 ENV PYTHONUNBUFFERED=1
 ENV HUGGINGFACE_HUB_CACHE=/opt/ml/model
+ENV PYTHONPATH="/opt/program:/opt/program/src:${PYTHONPATH}"
 
 # デフォルトのエントリポイント
 CMD ["python", "--version"]

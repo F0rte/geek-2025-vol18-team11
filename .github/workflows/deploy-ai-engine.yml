@@ -7,6 +7,7 @@ on:
     paths:
       - "infra/ai_engine/**"
       - "ai_engine/**"
+      - ".github/workflows/deploy-ai-engine.yml"
   workflow_dispatch:
 
 permissions:
@@ -59,42 +60,13 @@ jobs:
           aws-region: us-east-1
 
       - name: Start CodeBuild
-        id: codebuild
         run: |
           BUILD_ID=$(aws codebuild start-build \
             --project-name team11-ai-container-build \
             --source-version ${{ github.sha }} \
             --query 'build.id' \
             --output text)
-          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
 
-      - name: Wait for CodeBuild completion
-        run: |
-          BUILD_ID="${{ steps.codebuild.outputs.build_id }}"
-          echo "Waiting for build $BUILD_ID to complete..."
-
-          while true; do
-            STATUS=$(aws codebuild batch-get-builds \
-              --ids "$BUILD_ID" \
-              --query 'builds[0].buildStatus' \
-              --output text)
-            
-            echo "Current status: $STATUS"
-            
-            if [[ "$STATUS" == "SUCCEEDED" ]]; then
-              echo "Build succeeded!"
-              exit 0
-            elif [[ "$STATUS" == "FAILED" ]] || [[ "$STATUS" == "FAULT" ]] || [[ "$STATUS" == "TIMED_OUT" ]] || [[ "$STATUS" == "STOPPED" ]]; then
-              echo "Build failed with status: $STATUS"
-              exit 1
-            fi
-            
-            sleep 30
-          done
-
-      - name: Get build logs URL
-        if: always()
-        run: |
-          BUILD_ID="${{ steps.codebuild.outputs.build_id }}"
           REGION="us-east-1"
-          echo "CodeBuild Logs: https://$REGION.console.aws.amazon.com/codesuite/codebuild/projects/team11-ai-container-build/build/$BUILD_ID"
+          echo "✅ CodeBuild started: $BUILD_ID"
+          echo "📊 Monitor logs: https://$REGION.console.aws.amazon.com/codesuite/codebuild/projects/team11-ai-container-build/build/$BUILD_ID"
