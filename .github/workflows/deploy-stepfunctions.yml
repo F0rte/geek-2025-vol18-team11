@@ -1,0 +1,73 @@
+name: Deploy Step Functions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/ai_engine/sagemaker-role.yml"
+      - "infra/ai_engine/stepfunctions.yml"
+      - ".github/workflows/deploy-stepfunctions.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOidcRole-Team11
+          aws-region: us-east-1
+
+      - name: Get Account ID
+        id: account
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+
+      - name: Deploy SageMaker Execution Role
+        run: |
+          aws cloudformation deploy \
+            --template-file infra/ai_engine/sagemaker-role.yml \
+            --stack-name team11-sagemaker-role \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1
+
+      - name: Get SageMaker Role ARN
+        id: sagemaker-role
+        run: |
+          ROLE_ARN=$(aws cloudformation describe-stacks \
+            --stack-name team11-sagemaker-role \
+            --region us-east-1 \
+            --query 'Stacks[0].Outputs[?OutputKey==`SageMakerExecutionRoleArn`].OutputValue' \
+            --output text)
+          echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+
+      - name: Deploy Step Functions State Machine
+        run: |
+          aws cloudformation deploy \
+            --template-file infra/ai_engine/stepfunctions.yml \
+            --stack-name team11-stepfunctions \
+            --parameter-overrides \
+              SageMakerRoleArn=${{ steps.sagemaker-role.outputs.role_arn }} \
+              ECRImageUri=${{ steps.account.outputs.account_id }}.dkr.ecr.us-east-1.amazonaws.com/team11-ai-engine-repo:latest \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1
+
+      - name: Get State Machine ARN
+        id: state-machine
+        run: |
+          STATE_MACHINE_ARN=$(aws cloudformation describe-stacks \
+            --stack-name team11-stepfunctions \
+            --region us-east-1 \
+            --query 'Stacks[0].Outputs[?OutputKey==`StateMachineArn`].OutputValue' \
+            --output text)
+          echo "✓ State Machine deployed: $STATE_MACHINE_ARN"

@@ -29,7 +29,8 @@ RUN pip install --no-cache-dir \
     trimesh==4.5.3 \
     tqdm==4.67.1 \
     pyyaml==6.0.2 \
-    huggingface-hub
+    huggingface-hub \
+    boto3
 
 # Real-ESRGANのインストール（README手順そのまま）
 RUN git clone https://github.com/xinntao/Real-ESRGAN.git /tmp/Real-ESRGAN && \
