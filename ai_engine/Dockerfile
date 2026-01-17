@@ -42,8 +42,7 @@ RUN git clone https://github.com/xinntao/Real-ESRGAN.git /tmp/Real-ESRGAN && \
     pip install basicsr-fixed facexlib gfpgan && \
     \
     # basicsr の torchvision 非互換バグを修正するパッチ
-    sed -i 's/from torchvision.transforms.functional_tensor import rgb_to_grayscale/from torchvision.transforms.functional import rgb_to_grayscale/' /opt/conda/lib/python3.10/site-packages/basicsr/data/degradations.py && \
-    \
+    find / -name "degradations.py" -path "*/basicsr/data/degradations.py" -exec sed -i 's/from torchvision.transforms.functional_tensor import rgb_to_grayscale/from torchvision.transforms.functional import rgb_to_grayscale/g' {} + && \
     pip install -r requirements.txt && \
     python setup.py develop && \
     cd /opt/program && \
