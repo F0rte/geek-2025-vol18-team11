@@ -71,10 +71,16 @@ class Text2PanoramaGenerator:
             logger.info("[Optimization] Enabling FP8 GeMM")
             FluxFp8GeMMProcessor(self.pipe.transformer)
         
+        self.helper = None
         if self.args.cache:
             logger.info("[Optimization] Enabling DeepCache")
-            self.helper = DeepCacheHelper(pipe=self.pipe)
-            self.helper.set_params(cache_interval=3, cache_branch_id=0)
+            # pipe_modelにtransformerを渡し、no_cache_steps等は__init__で指定
+            self.helper = DeepCacheHelper(
+                pipe_model=self.pipe.transformer,
+                no_cache_steps=list(range(0, 10)) + list(range(10, 40, 3)) + list(range(40, 50)),
+                no_cache_block_id={"single": [38]}
+            )
+            self.helper.start_timestep = 0
             self.helper.enable()
         
         # Default prompts
@@ -86,19 +92,15 @@ class Text2PanoramaGenerator:
     
     def generate(self, prompt, negative_prompt="", seed=42):
         """Generate panorama from text prompt"""
-        
         # Combine prompts
         full_prompt = f"{prompt}, {self.general_positive_prompt}"
         full_negative = f"{negative_prompt}, {self.general_negative_prompt}"
-        
         logger.info(f"[Step 1] Generating panorama from prompt: {prompt}")
         logger.info(f"[Config] Seed: {seed}, Steps: {self.num_inference_steps}")
-        
         # Set random seed
         generator = torch.Generator(device="cuda").manual_seed(seed)
-        
         # Generate panorama
-        output = self.pipe(
+        pipe_kwargs = dict(
             prompt=full_prompt,
             negative_prompt=full_negative,
             height=self.height,
@@ -108,7 +110,10 @@ class Text2PanoramaGenerator:
             generator=generator,
             blend_extend=self.blend_extend,
         )
-        
+        # DeepCache有効時はhelperを渡す
+        if self.helper is not None:
+            pipe_kwargs["helper"] = self.helper
+        output = self.pipe(**pipe_kwargs)
         return output.images[0]
 
 
