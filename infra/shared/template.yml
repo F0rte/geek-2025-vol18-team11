@@ -30,12 +30,21 @@ Resources:
       Description: "Placeholder for Frontend URL"
 
   # ------------------------------------------------------------
-  # S3 bucket for CFn
+  # S3 bucket
   # ------------------------------------------------------------
   ArtifactBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub "team11-cfn-artifacts"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  SourceBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "team11-data-source"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -80,3 +89,5 @@ Outputs:
     Value: !GetAtt GithubActionsRole.Arn
   ArtifactBucketName:
     Value: !Ref ArtifactBucket
+  SourceBucketName:
+    Value: !Ref SourceBucket
