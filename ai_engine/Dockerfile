@@ -20,17 +20,21 @@ RUN git clone https://github.com/Tencent-Hunyuan/HunyuanWorld-1.0.git /opt/progr
 # conda環境の代わりにpipで依存関係をインストール
 # docker/HunyuanWorld.yamlの内容をpip形式で再現
 RUN pip install --no-cache-dir \
-    diffusers==0.31.0 \
-    transformers==4.46.0 \
-    accelerate==1.1.1 \
-    Pillow==11.0.0 \
-    opencv-python==4.10.0.84 \
+    diffusers==0.34.0 \
+    transformers==4.52.0 \
+    accelerate==1.6.0 \
+    Pillow==11.1.0 \
+    opencv-python==4.11.0.86 \
     open3d==0.18.0 \
     trimesh==4.5.3 \
     tqdm==4.67.1 \
     pyyaml==6.0.2 \
     huggingface-hub \
     boto3
+
+RUN pip install --no-cache-dir \
+    "git+https://github.com/facebookresearch/pytorch3d.git" \
+    "git+https://github.com/microsoft/MoGe.git"
 
 # Real-ESRGANのインストール（README手順そのまま）
 RUN git clone https://github.com/xinntao/Real-ESRGAN.git /tmp/Real-ESRGAN && \
