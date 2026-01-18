@@ -21,20 +21,14 @@ export interface WorldsResponse {
   worlds: World[];
 }
 
-// Future: Generate endpoint types (commented out for now)
-// export interface GenerateRequest {
-//     prompt_ja: string;
-//     seed?: number;
-//     classes?: string;
-// }
-//
-// export interface GenerateResponse {
-//     execution_arn: string;
-//     execution_id: string;
-//     theme: string;
-//     prompt_en: string;
-//     status: string;
-// }
+export interface GenerateRequest {
+  prompt: string;
+}
+
+export interface GenerateResponse {
+  message: string;
+  executionArn?: string;
+}
 
 // ============================================================================
 // Helper Functions
@@ -97,25 +91,35 @@ export async function getWorlds(): Promise<World[]> {
   }
 }
 
-// Future: Generate endpoint (commented out for now)
-// export async function generateWorld(request: GenerateRequest): Promise<GenerateResponse> {
-//     try {
-//         const baseUrl = getApiBaseUrl();
-//         const response = await fetch(`${baseUrl}/generate`, {
-//             method: "POST",
-//             headers: {
-//                 "Content-Type": "application/json",
-//             },
-//             body: JSON.stringify(request),
-//         });
-//
-//         if (!response.ok) {
-//             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-//         }
-//
-//         const data: GenerateResponse = await response.json();
-//         return data;
-//     } catch (error) {
-//         handleFetchError(error);
-//     }
-// }
+/**
+ * Generate a new 3D world from a text prompt
+ *
+ * @param prompt - Text prompt describing the desired 3D world
+ * @returns Promise<GenerateResponse> - Response with execution details
+ * @throws Error if API call fails or NEXT_PUBLIC_API_URL is not set
+ *
+ * @example
+ * const response = await generateWorld("森と山が広がる幻想的な風景");
+ * console.log(response.message); // "3D world generation started"
+ */
+export async function generateWorld(prompt: string): Promise<GenerateResponse> {
+  try {
+    const baseUrl = getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data: GenerateResponse = await response.json();
+    return data;
+  } catch (error) {
+    handleFetchError(error);
+  }
+}
