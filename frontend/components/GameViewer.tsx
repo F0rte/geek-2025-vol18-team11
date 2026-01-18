@@ -5,10 +5,12 @@ import * as THREE from "three";
 import { PLYLoader } from "three-stdlib";
 import { DRACOLoader } from "three-stdlib";
 import { getWorlds, World } from "../lib/api-client";
+import { useRouter } from "next/navigation";
 
 const SKIP_RATIO = 10;
 
 export default function GameViewer() {
+    const router = useRouter();
     const containerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(false);
     const [score, setScore] = useState(0);
@@ -765,11 +767,7 @@ export default function GameViewer() {
                                 </button>
 
                                 <button
-                                    onClick={() => {
-                                        setIsGameOver(false);
-                                        setUploadVisible(true);
-                                        setSourceMode('initial'); // Reset to initial selection
-                                    }}
+                                    onClick={() => router.push('/')}
                                     className="px-6 py-3 bg-slate-800 border-2 border-slate-600 text-slate-300 font-bold uppercase tracking-widest hover:border-slate-400 hover:text-white transition-colors"
                                 >
                                     Return to Title
