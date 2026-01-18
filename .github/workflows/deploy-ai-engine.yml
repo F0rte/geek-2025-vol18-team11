@@ -1,9 +1,6 @@
 name: Deploy AI Engine Infrastructure
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     types: [closed]
     branches:
