@@ -143,7 +143,9 @@ export default function GameViewer() {
         document.addEventListener("mousemove", handleMouseMove);
         document.addEventListener("pointerlockchange", handlePointerLockChange);
         document.addEventListener("mousedown", handleMouseDown);
-        renderer.domElement.addEventListener("click", handleClick);
+        if (renderer.domElement) {
+            renderer.domElement.addEventListener("click", handleClick);
+        }
 
         // --- Game Functions ---
         const spawnEnemy = (time: number) => {
@@ -505,8 +507,36 @@ export default function GameViewer() {
     };
 
     const handleStartClick = () => {
-        if (gameStateRef.current.renderer) {
+        if (gameStateRef.current.renderer && gameStateRef.current.renderer.domElement) {
             gameStateRef.current.renderer.domElement.requestPointerLock();
+        }
+    };
+
+    const resetGame = () => {
+        const state = gameStateRef.current;
+        // Reset Logic - keep geometry but reset game state
+        setScore(0);
+        state.score = 0;
+        setTimeLeft(60);
+        setIsGameOver(false);
+        setGameActive(true);
+        setIsPaused(true);
+        state.gameActive = true;
+        state.isPaused = true;
+
+        // Remove enemies
+        if (state.scene) {
+            for (let i = state.scene.children.length - 1; i >= 0; i--) {
+                const child = state.scene.children[i];
+                if (state.enemies.includes(child as THREE.Mesh)) {
+                    state.scene.remove(child);
+                }
+            }
+        }
+        state.enemies = []; // Clear array
+
+        if (state.camera) {
+            state.camera.position.set(0, 0.5, 0);
         }
     };
 
@@ -725,17 +755,26 @@ export default function GameViewer() {
                                 {score.toString().padStart(6, '0')}
                             </div>
 
-                            <button
-                                onClick={() => {
-                                    setIsGameOver(false);
-                                    setUploadVisible(true);
-                                    setSourceMode('initial'); // Reset to initial selection
-                                }}
-                                className="px-8 py-3 bg-cyan-600 text-black font-bold uppercase tracking-widest hover:bg-cyan-400 transition-colors clip-path-polygon"
-                                style={{ clipPath: "polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%)" }}
-                            >
-                                Re-Initialize
-                            </button>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={resetGame}
+                                    className="px-8 py-3 bg-cyan-600 text-black font-bold uppercase tracking-widest hover:bg-cyan-400 transition-colors clip-path-polygon"
+                                    style={{ clipPath: "polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%)" }}
+                                >
+                                    Retry Mission
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        setIsGameOver(false);
+                                        setUploadVisible(true);
+                                        setSourceMode('initial'); // Reset to initial selection
+                                    }}
+                                    className="px-6 py-3 bg-slate-800 border-2 border-slate-600 text-slate-300 font-bold uppercase tracking-widest hover:border-slate-400 hover:text-white transition-colors"
+                                >
+                                    Return to Title
+                                </button>
+                            </div>
                         </div>
                     )}
 
