@@ -69,7 +69,10 @@ RUN pip install --no-cache-dir \
 
 RUN pip install --no-cache-dir \
     "git+https://github.com/facebookresearch/pytorch3d.git" \
-    "git+https://github.com/microsoft/MoGe.git"
+    "git+https://github.com/microsoft/MoGe.git" \
+    "git+https://github.com/EasternJournalist/utils3d.git"
+
+RUN pip install --upgrade "numpy>=1.25.0"
 
 # Real-ESRGANのインストール
 RUN git clone https://github.com/xinntao/Real-ESRGAN.git /tmp/Real-ESRGAN && \
