@@ -5,17 +5,21 @@ import * as THREE from "three";
 import { PLYLoader } from "three-stdlib";
 import { DRACOLoader } from "three-stdlib";
 import { getWorlds, World } from "../lib/api-client";
+import { useRouter } from "next/navigation";
 
 const SKIP_RATIO = 10;
 
 export default function GameViewer() {
+    const router = useRouter();
     const containerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(false);
     const [score, setScore] = useState(0);
     const [gameActive, setGameActive] = useState(false);
     const [isPaused, setIsPaused] = useState(true);
     const [uploadVisible, setUploadVisible] = useState(true);
-    
+    const [timeLeft, setTimeLeft] = useState(60);
+    const [isGameOver, setIsGameOver] = useState(false);
+
     // Source selection state
     const [sourceMode, setSourceMode] = useState<'initial' | 'upload' | 'select'>('initial');
     const [worldsList, setWorldsList] = useState<World[]>([]);
@@ -35,6 +39,27 @@ export default function GameViewer() {
         scene: null as THREE.Scene | null,
         renderer: null as THREE.WebGLRenderer | null,
     });
+
+    // --- Timer Logic ---
+    useEffect(() => {
+        if (!gameActive || isPaused || isGameOver) return;
+
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    setIsGameOver(true);
+                    setGameActive(false);
+                    // Unlock cursor
+                    document.exitPointerLock();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [gameActive, isPaused, isGameOver]);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -120,7 +145,9 @@ export default function GameViewer() {
         document.addEventListener("mousemove", handleMouseMove);
         document.addEventListener("pointerlockchange", handlePointerLockChange);
         document.addEventListener("mousedown", handleMouseDown);
-        renderer.domElement.addEventListener("click", handleClick);
+        if (renderer.domElement) {
+            renderer.domElement.addEventListener("click", handleClick);
+        }
 
         // --- Game Functions ---
         const spawnEnemy = (time: number) => {
@@ -282,7 +309,7 @@ export default function GameViewer() {
         try {
             const plyLoader = new PLYLoader();
             const plyUrls = world.ply_urls;
-            
+
             // Parallel fetch all PLY files
             const fetchPromises = plyUrls.map(async (url) => {
                 const response = await fetch(url);
@@ -293,7 +320,7 @@ export default function GameViewer() {
             });
 
             const buffers = await Promise.all(fetchPromises);
-            
+
             // Process each geometry
             const processAndAddGeometry = (originalGeometry: THREE.BufferGeometry) => {
                 const positions = originalGeometry.attributes.position;
@@ -351,6 +378,11 @@ export default function GameViewer() {
             if (gameStateRef.current.camera) {
                 gameStateRef.current.camera.position.set(0, 0.5, 0);
             }
+            // Reset Score and Timer
+            setScore(0);
+            gameStateRef.current.score = 0;
+            setTimeLeft(60);
+            setIsGameOver(false);
         } catch (error) {
             setLoading(false);
             setErrorMessage(error instanceof Error ? error.message : "Failed to load world");
@@ -451,6 +483,11 @@ export default function GameViewer() {
                         if (gameStateRef.current.camera) {
                             gameStateRef.current.camera.position.set(0, 0.5, 0);
                         }
+                        // Reset Score and Timer
+                        setScore(0);
+                        gameStateRef.current.score = 0;
+                        setTimeLeft(60);
+                        setIsGameOver(false);
                     }
                 };
 
@@ -472,8 +509,36 @@ export default function GameViewer() {
     };
 
     const handleStartClick = () => {
-        if (gameStateRef.current.renderer) {
+        if (gameStateRef.current.renderer && gameStateRef.current.renderer.domElement) {
             gameStateRef.current.renderer.domElement.requestPointerLock();
+        }
+    };
+
+    const resetGame = () => {
+        const state = gameStateRef.current;
+        // Reset Logic - keep geometry but reset game state
+        setScore(0);
+        state.score = 0;
+        setTimeLeft(60);
+        setIsGameOver(false);
+        setGameActive(true);
+        setIsPaused(true);
+        state.gameActive = true;
+        state.isPaused = true;
+
+        // Remove enemies
+        if (state.scene) {
+            for (let i = state.scene.children.length - 1; i >= 0; i--) {
+                const child = state.scene.children[i];
+                if (state.enemies.includes(child as THREE.Mesh)) {
+                    state.scene.remove(child);
+                }
+            }
+        }
+        state.enemies = []; // Clear array
+
+        if (state.camera) {
+            state.camera.position.set(0, 0.5, 0);
         }
     };
 
@@ -569,7 +634,7 @@ export default function GameViewer() {
                                         className="hidden"
                                         onChange={handleFileUpload}
                                     />
-                                    
+
                                     <button
                                         onClick={() => setSourceMode('initial')}
                                         className="mt-4 px-4 py-2 text-slate-400 hover:text-cyan-300 text-sm transition-colors"
@@ -606,11 +671,10 @@ export default function GameViewer() {
                                                     <button
                                                         key={world.id}
                                                         onClick={() => setSelectedWorld(world)}
-                                                        className={`px-4 py-3 text-left border transition-all duration-200 ${
-                                                            selectedWorld?.id === world.id
-                                                                ? 'bg-cyan-900/50 border-cyan-400 text-cyan-100'
-                                                                : 'bg-slate-900/50 border-slate-700 text-slate-300 hover:border-cyan-500/50'
-                                                        }`}
+                                                        className={`px-4 py-3 text-left border transition-all duration-200 ${selectedWorld?.id === world.id
+                                                            ? 'bg-cyan-900/50 border-cyan-400 text-cyan-100'
+                                                            : 'bg-slate-900/50 border-slate-700 text-slate-300 hover:border-cyan-500/50'
+                                                            }`}
                                                     >
                                                         <div className="flex items-center gap-2">
                                                             {selectedWorld?.id === world.id && (
@@ -683,8 +747,37 @@ export default function GameViewer() {
                         </div>
                     )}
 
+                    {/* Game Over Screen */}
+                    {!uploadVisible && isGameOver && (
+                        <div className="absolute inset-0 bg-slate-950/90 flex flex-col justify-center items-center z-40 backdrop-blur-sm">
+                            <h2 className="text-red-500 text-4xl mb-2 font-black tracking-widest uppercase drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">
+                                MISSION ENDED
+                            </h2>
+                            <div className="text-6xl font-black text-white mb-8 tracking-tighter">
+                                {score.toString().padStart(6, '0')}
+                            </div>
+
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={resetGame}
+                                    className="px-8 py-3 bg-cyan-600 text-black font-bold uppercase tracking-widest hover:bg-cyan-400 transition-colors clip-path-polygon"
+                                    style={{ clipPath: "polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%)" }}
+                                >
+                                    Retry Mission
+                                </button>
+
+                                <button
+                                    onClick={() => router.push('/')}
+                                    className="px-6 py-3 bg-slate-800 border-2 border-slate-600 text-slate-300 font-bold uppercase tracking-widest hover:border-slate-400 hover:text-white transition-colors"
+                                >
+                                    Return to Title
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Pause Overlay */}
-                    {!uploadVisible && isPaused && (
+                    {!uploadVisible && isPaused && !isGameOver && (
                         <div
                             className="absolute inset-0 bg-slate-950/80 backdrop-blur-[2px] text-cyan-50 flex flex-col justify-center items-center z-20 cursor-pointer hover:bg-slate-950/70 transition-colors"
                             onClick={handleStartClick}
@@ -700,7 +793,7 @@ export default function GameViewer() {
                     )}
 
                     {/* Game UI */}
-                    {!uploadVisible && !isPaused && (
+                    {!uploadVisible && !isPaused && !isGameOver && (
                         <div className="absolute inset-0 pointer-events-none z-10 p-4">
                             {/* Reticle */}
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -716,6 +809,15 @@ export default function GameViewer() {
                                     {score.toString().padStart(6, '0')}
                                 </div>
                             </div>
+
+                            {/* HUD Top Left (Timer) */}
+                            <div className="absolute top-4 left-4 flex flex-col items-start">
+                                <div className="text-xs text-red-500/70 uppercase tracking-widest mb-1">Time Remaining</div>
+                                <div className={`text-4xl font-black tracking-tighter drop-shadow-[0_0_5px_rgba(239,68,68,0.5)] tabular-nums ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                                    {timeLeft.toString().padStart(2, '0')}
+                                </div>
+                            </div>
+
 
                             {/* HUD Bottom Left */}
                             <div className="absolute bottom-4 left-4">
@@ -775,6 +877,6 @@ export default function GameViewer() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
