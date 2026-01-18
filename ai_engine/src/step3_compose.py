@@ -19,7 +19,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from hy3dworld import WorldComposer
+from hy3dworld import WorldComposer, process_file
 
 
 class MeshComposer:
@@ -47,16 +47,35 @@ class MeshComposer:
         """Compose 3D mesh from layer data"""
         
         logger.info(f"[Step 3] Composing 3D world from layers")
-        logger.info(f"[Input] Panorama: {panorama_path}")
         logger.info(f"[Input] Layers dir: {layers_dir}")
         
-        # Compose world using WorldComposer
-        self.composer.run(
-            image_path=panorama_path,
-            output_dir=output_dir,
-            layers_dir=layers_dir,
-            export_drc=self.args.export_drc
+        # 1. Load decomposed layers (generated in Step 2)
+        # _load_separate_pano_from_dir searches for fg1.json, fg1_mask.png, etc.
+        separate_pano, fg_bboxes = self.composer._load_separate_pano_from_dir(
+            layers_dir, sr=True
         )
+
+        # 2. Generate world (Meshes)
+        layered_world_mesh = self.composer.generate_world(
+            separate_pano=separate_pano, 
+            fg_bboxes=fg_bboxes, 
+            world_type='mesh'
+        )
+        
+        # 3. Save results (PLY / DRC)
+        for layer_idx, layer_info in enumerate(layered_world_mesh):
+            # Save PLY
+            mesh_filename = f"mesh_layer{layer_idx}.ply"
+            output_path = os.path.join(output_dir, mesh_filename)
+            o3d.io.write_triangle_mesh(output_path, layer_info['mesh'])
+            logger.info(f"Saved mesh: {output_path}")
+
+            # Export DRC if requested
+            if self.args.export_drc:
+                drc_filename = f"mesh_layer{layer_idx}.drc"
+                output_path_drc = os.path.join(output_dir, drc_filename)
+                process_file(output_path, output_path_drc)
+                logger.info(f"Saved DRC: {output_path_drc}")
         
         logger.info(f"[Step 3] Mesh composition completed")
 

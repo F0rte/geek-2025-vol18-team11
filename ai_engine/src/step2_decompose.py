@@ -55,16 +55,46 @@ class PanoramaDecomposer:
         logger.info(f"[Config] FG2 labels: {labels_fg2}")
         logger.info(f"[Config] Scene class: {classes}")
         
-        # Run layer decomposition (calls internal methods)
-        result = self.decomposer.run(
-            image_path=panorama_path,
-            labels_fg1=labels_fg1,
-            labels_fg2=labels_fg2,
-            classes=classes,
-            output_dir=self.args.output_dir
-        )
+        output_dir = self.args.output_dir
+
+        # Process each layer sequentially
         
-        return result
+        # --- Layer 0: Foreground 1 ---
+        logger.info("Processing Layer 0 (Foreground 1)...")
+        fg1_infos = [
+            {
+                "image_path": panorama_path,
+                "output_path": output_dir,
+                "labels": labels_fg1,
+                "class": classes,
+            }
+        ]
+        self.decomposer(fg1_infos, layer=0)
+        
+        # --- Layer 1: Foreground 2 ---
+        # Use Layer 0 output (remove_fg1_image.png) as input
+        fg1_removed_path = os.path.join(output_dir, 'remove_fg1_image.png')
+        if not os.path.exists(fg1_removed_path):
+            logger.warning(f"Layer 0 output not found at {fg1_removed_path}. Using original panorama.")
+            fg1_removed_path = panorama_path
+
+        logger.info("Processing Layer 1 (Foreground 2)...")
+        fg2_infos = [
+            {
+                "image_path": fg1_removed_path,
+                "output_path": output_dir,
+                "labels": labels_fg2,
+                "class": classes,
+            }
+        ]
+        self.decomposer(fg2_infos, layer=1)
+        
+        # --- Layer 2: Sky ---
+        # Use same configuration as Layer 1 for Sky processing
+        logger.info("Processing Layer 2 (Sky)...")
+        self.decomposer(fg2_infos, layer=2)
+        
+        return True
 
 
 def main():
