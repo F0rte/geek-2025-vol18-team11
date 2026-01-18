@@ -22,12 +22,17 @@ export interface WorldsResponse {
 }
 
 export interface GenerateRequest {
-  prompt: string;
+  prompt_ja: string;
+  seed?: number;
+  classes?: string;
 }
 
 export interface GenerateResponse {
-  message: string;
-  executionArn?: string;
+  execution_arn: string;
+  execution_id: string;
+  theme: string;
+  prompt_en: string;
+  status: string;
 }
 
 // ============================================================================
@@ -100,9 +105,13 @@ export async function getWorlds(): Promise<World[]> {
  *
  * @example
  * const response = await generateWorld("森と山が広がる幻想的な風景");
- * console.log(response.message); // "3D world generation started"
+ * console.log(response.execution_id); // "mystic-forest-1234567890"
  */
-export async function generateWorld(prompt: string): Promise<GenerateResponse> {
+export async function generateWorld(
+  prompt_ja: string,
+  seed: number = 42,
+  classes: string = "outdoor",
+): Promise<GenerateResponse> {
   try {
     const baseUrl = getApiBaseUrl();
     const response = await fetch(`${baseUrl}/generate`, {
@@ -110,7 +119,7 @@ export async function generateWorld(prompt: string): Promise<GenerateResponse> {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt_ja, seed, classes }),
     });
 
     if (!response.ok) {
