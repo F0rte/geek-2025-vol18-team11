@@ -122,6 +122,8 @@ def main():
     # Optimization flags
     parser.add_argument("--fp8_attention", action='store_true', default=True)
     parser.add_argument("--fp8_gemm", action='store_true', default=True)
+    parser.add_argument("--cache", action='store_true', default=False,
+                        help="Enable DeepCache for acceleration")
     
     # S3 output (optional)
     parser.add_argument("--s3_bucket", type=str, default=os.environ.get('S3_OUTPUT_BUCKET', 'team11-data-source'),
