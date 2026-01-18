@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   deploy:
+    if: false # ワークフロー無効化
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
