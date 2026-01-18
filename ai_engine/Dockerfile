@@ -17,6 +17,35 @@ RUN apt-get update && apt-get install -y \
 RUN git clone https://github.com/Tencent-Hunyuan/HunyuanWorld-1.0.git /opt/program && \
     cd /opt/program
 
+# pano_depth_utils.py の修正パッチ (utils3d.numpy.image_uv の不足を解消)
+# 1. 不足している image_uv 関数をファイルの末尾に追記
+RUN cat >> /opt/program/hy3dworld/utils/pano_depth_utils.py <<'EOF'
+
+# Added by Dockerfile to fix missing utils3d functions
+def image_uv(width, height):
+    import numpy as np
+    u = np.linspace(0.5 / width, 1 - 0.5 / width, width)
+    v = np.linspace(0.5 / height, 1 - 0.5 / height, height)
+    u_grid, v_grid = np.meshgrid(u, v, indexing='xy')
+    uv = np.stack([u_grid, v_grid], axis=-1)
+    return uv
+
+def intrinsics_to_fov(intrinsics):
+    import numpy as np
+    # intrinsics shape: (..., 3, 3)
+    cx = intrinsics[..., 0, 2]
+    cy = intrinsics[..., 1, 2]
+    fx = intrinsics[..., 0, 0]
+    fy = intrinsics[..., 1, 1]
+    fov_x = 2 * np.arctan(cx / fx)
+    fov_y = 2 * np.arctan(cy / fy)
+    return fov_x, fov_y
+EOF
+
+# utils3d.numpy.xxx の呼び出しを、ローカル定義の関数に書き換え
+RUN sed -i 's/utils3d\.numpy\.image_uv/image_uv/g' /opt/program/hy3dworld/utils/pano_depth_utils.py && \
+    sed -i 's/utils3d\.numpy\.intrinsics_to_fov/intrinsics_to_fov/g' /opt/program/hy3dworld/utils/pano_depth_utils.py
+
 # conda環境の代わりにpipで依存関係をインストール
 # docker/HunyuanWorld.yamlの内容をpip形式で再現
 RUN pip install --no-cache-dir \
@@ -69,10 +98,7 @@ RUN pip install --no-cache-dir \
 
 RUN pip install --no-cache-dir \
     "git+https://github.com/facebookresearch/pytorch3d.git" \
-    "git+https://github.com/microsoft/MoGe.git" \
-    "git+https://github.com/EasternJournalist/utils3d.git"
-
-RUN pip install --upgrade "numpy>=1.25.0"
+    "git+https://github.com/microsoft/MoGe.git"
 
 # Real-ESRGANのインストール
 RUN git clone https://github.com/xinntao/Real-ESRGAN.git /tmp/Real-ESRGAN && \

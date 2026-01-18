@@ -19,7 +19,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from hy3dworld import WorldComposer, process_file
+from hy3dworld import WorldComposer
+from hy3dworld.utils.export_utils import process_file
 
 
 class MeshComposer:
