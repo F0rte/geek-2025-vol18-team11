@@ -17,6 +17,7 @@ permissions:
 
 jobs:
   deploy-infrastructure:
+    if: false # ワークフロー無効化
     # if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -52,6 +53,7 @@ jobs:
               ECRRepositoryName=team11-ai-engine-repo
 
   trigger-build:
+    if: false # ワークフロー無効化
     needs: deploy-infrastructure
     runs-on: ubuntu-latest
     steps:
