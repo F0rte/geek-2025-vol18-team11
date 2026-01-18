@@ -28,7 +28,7 @@ class MeshComposer:
         self.args = args
         
         # Higher resolution for g5.4xlarge (48GB VRAM)
-        target_size = 3840  # 2x resolution for better quality
+        target_size = 1920
         kernel_scale = max(1, int(target_size / 1920))
         
         logger.info("[Step 3] Initializing WorldComposer...")
